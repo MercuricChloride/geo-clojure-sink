@@ -93,9 +93,6 @@
         (h/on-conflict :id (h/do-nothing))
         (sql/format {:pretty true})
         try-execute)))
-;; (let [type-creations (filter #((= (:id (:value %)) "type")) filtered)]
-;;       (map #(try-execute (sql/format {:create-table (keyword (:space %) (:entityId %)) :with-columns [[:id :text [:not nil]]
-;;                                                                                                       [:entity_id :text [:not nil] [:references :public/entities :id]]]})) type-creations))
 
 (defn populate-attributes [actions]
   (let [filtered (into [] (filter #(= (:attributeId %) "01412f83-8189-4ab1-8365-65c7fd358cc1") actions))]
@@ -122,15 +119,78 @@
         (= type :spaces) (populate-spaces actions)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
-(nuke-db)
+;; (try-execute
+;;  (sql/format [:raw "CREATE INDEX idx_entity_attribute ON public.triples(entity_id, attribute_id);"]))
+;; (try-execute
+;;  (sql/format [:raw "CREATE INDEX idx_entity_attribute_value_id ON public.triples(entity_id, attribute_id, value_id);"]))
 
-(time
- (do
-   (doall (map #(populate-db :entities %) files))
-   (doall (map #(populate-db :triples %) files))
-   (doall (map #(populate-db :spaces %) files))
-   (doall (map #(populate-db :types %) files))
-   (doall (map #(populate-db :attributes %) files))
-   (make-space-schemas)
-   (create-type-tables)
-   (println "done with everything")))
+;(h/add-index :idx-entity-attribute)
+;(h/alter)
+
+;(nuke-db)
+
+;; (time
+;;  (do
+;;    (time (doall (map #(populate-db :entities %) files)))
+;;    (time (doall (map #(populate-db :triples %) files)))
+;;    (time (doall (map #(populate-db :spaces %) files)))
+;;    (time (doall (map #(populate-db :types %) files)))
+;;    (time (doall (map #(populate-db :attributes %) files)))
+;;    (time (make-space-schemas))
+;;    (time (create-type-tables))
+;;    (println "done with everything")))
+
+(def template-function-str
+    "CREATE OR REPLACE FUNCTION \"type-$$ENTITY_ID$$\"(ent_id text)
+    RETURNS public.entity_types AS $$
+    DECLARE
+        result_record public.entity_types;
+    BEGIN
+        SELECT *
+        INTO result_record
+        FROM entity_types
+        WHERE type = '$$ENTITY_ID$$'
+        AND entity_id = ent_id;
+
+        RETURN result_record;
+    EXCEPTION
+        WHEN NO_DATA_FOUND THEN
+            RETURN NULL;
+    END;
+    $$ LANGUAGE plpgsql STRICT STABLE;
+    comment on function \"type-$$ENTITY_ID$$\"(_entity_id text) is E'@name $$ENTITY_NAME$$';
+    ")
+
+(defn type-function
+  "Creates a function in the DB to get all entities of a given type"
+  [entity-id entity-name]
+  (-> template-function-str
+    (cstr/replace "$$ENTITY_ID$$" entity-id)
+    (cstr/replace "$$ENTITY_NAME$$" entity-name)))
+
+(def all-type-function
+    "CREATE OR REPLACE FUNCTION allTypes()
+    RETURNS SETOF entities AS $$
+    BEGIN
+    RETURN QUERY
+    SELECT e.*
+    FROM entities e
+    WHERE e.is_type = true;
+    END;
+    $$ LANGUAGE plpgsql STRICT STABLE;")
+
+(def all-attribute-function
+    "CREATE OR REPLACE FUNCTION entities_attributes(e entities)
+    RETURNS SETOF entities AS $$
+    BEGIN
+    RETURN QUERY
+    SELECT e.*
+    FROM entities
+    JOIN triples t ON entities.id = t.entity_id
+    WHERE t.attribute_id = '01412f83-8189-4ab1-8365-65c7fd358cc1' AND e.id = t.value_id;
+    END;
+    $$ LANGUAGE plpgsql STRICT STABLE;")
+
+;; (try-execute (sql/format [:raw all-type-function]))
+;; (try-execute (sql/format [:raw all-attribute-function]))
+;; (try-execute (sql/format [:raw (type-function "type" "types")]))
