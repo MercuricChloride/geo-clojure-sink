@@ -1,5 +1,5 @@
 version: v1
 plugins:
   - name: clojure
-    out: src
-    opt: paths=source_relative
+    out: "src/"
+    opt: ["paths=source_relative", "grpc-client"]

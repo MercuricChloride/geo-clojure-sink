@@ -10,7 +10,9 @@
                   [com.github.seancorfield/honeysql "2.4.1078"]
                   [com.zaxxer/HikariCP "5.0.1"]
                   [lynxeyes/dotenv "1.1.0"]
+
                   [io.github.protojure/core "2.0.1"]
+                  [io.github.protojure/grpc-client "2.0.1"]
                   [io.github.protojure/google.protobuf "2.0.0"]]
   :main ^:skip-aot lein-test.core
   :target-path "target/%s"

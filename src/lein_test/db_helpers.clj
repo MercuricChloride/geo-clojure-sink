@@ -11,7 +11,6 @@
                            {:dbtype "postgres" :dbname (env "GEO_DB_NAME") :username (env "GEO_DB_USERNAME") :password (env "GEO_DB_PASSWORD") :maximumPoolSize 10
                             :dataSourceProperties {:socketTimeout 30}}))
 
-
 (defn try-execute [query]
   (try
     (jdbc/execute! ds query)

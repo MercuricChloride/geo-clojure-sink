@@ -9,6 +9,7 @@
             [protojure.protobuf.serdes.complex :as serdes.complex]
             [protojure.protobuf.serdes.utils :refer [tag-map]]
             [protojure.protobuf.serdes.stream :as serdes.stream]
+            [sf.substreams.v1 :as sf.substreams.v1]
             [com.google.protobuf :as com.google.protobuf]
             [clojure.set :as set]
             [clojure.spec.alpha :as s]))
@@ -19,12 +20,18 @@
 ;;----------------------------------------------------------------------------------
 ;;----------------------------------------------------------------------------------
 
+(declare cis->ModuleMetadata)
+(declare ecis->ModuleMetadata)
+(declare new-ModuleMetadata)
 (declare cis->BlockRef)
 (declare ecis->BlockRef)
 (declare new-BlockRef)
 (declare cis->Module-KindMap)
 (declare ecis->Module-KindMap)
 (declare new-Module-KindMap)
+(declare cis->Package)
+(declare ecis->Package)
+(declare new-Package)
 (declare cis->Module-Input-Params)
 (declare ecis->Module-Input-Params)
 (declare new-Module-Input-Params)
@@ -52,6 +59,9 @@
 (declare cis->Module-Input-Store)
 (declare ecis->Module-Input-Store)
 (declare new-Module-Input-Store)
+(declare cis->PackageMetadata)
+(declare ecis->PackageMetadata)
+(declare new-PackageMetadata)
 (declare cis->Module-Output)
 (declare ecis->Module-Output)
 (declare new-Module-Output)
@@ -176,6 +186,57 @@
 ;;----------------------------------------------------------------------------------
 
 ;-----------------------------------------------------------------------------
+; ModuleMetadata
+;-----------------------------------------------------------------------------
+(defrecord ModuleMetadata-record [package-index doc]
+  pb/Writer
+  (serialize [this os]
+    (serdes.core/write-UInt64 1  {:optimize true} (:package-index this) os)
+    (serdes.core/write-String 2  {:optimize true} (:doc this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "sf.substreams.v1.ModuleMetadata"))
+
+(s/def :sf.substreams.v1.ModuleMetadata/package-index int?)
+(s/def :sf.substreams.v1.ModuleMetadata/doc string?)
+(s/def ::ModuleMetadata-spec (s/keys :opt-un [:sf.substreams.v1.ModuleMetadata/package-index :sf.substreams.v1.ModuleMetadata/doc ]))
+(def ModuleMetadata-defaults {:package-index 0 :doc "" })
+
+(defn cis->ModuleMetadata
+  "CodedInputStream to ModuleMetadata"
+  [is]
+  (->> (tag-map ModuleMetadata-defaults
+         (fn [tag index]
+             (case index
+               1 [:package-index (serdes.core/cis->UInt64 is)]
+               2 [:doc (serdes.core/cis->String is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->ModuleMetadata-record)))
+
+(defn ecis->ModuleMetadata
+  "Embedded CodedInputStream to ModuleMetadata"
+  [is]
+  (serdes.core/cis->embedded cis->ModuleMetadata is))
+
+(defn new-ModuleMetadata
+  "Creates a new instance from a map, similar to map->ModuleMetadata except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::ModuleMetadata-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::ModuleMetadata-spec init))))]}
+  (-> (merge ModuleMetadata-defaults init)
+      (map->ModuleMetadata-record)))
+
+(defn pb->ModuleMetadata
+  "Protobuf to ModuleMetadata"
+  [input]
+  (cis->ModuleMetadata (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record ModuleMetadata-meta {:type "sf.substreams.v1.ModuleMetadata" :decoder pb->ModuleMetadata})
+
+;-----------------------------------------------------------------------------
 ; BlockRef
 ;-----------------------------------------------------------------------------
 (defrecord BlockRef-record [id number]
@@ -273,6 +334,83 @@
   (cis->Module-KindMap (serdes.stream/new-cis input)))
 
 (def ^:protojure.protobuf.any/record Module-KindMap-meta {:type "sf.substreams.v1.Module-KindMap" :decoder pb->Module-KindMap})
+
+;-----------------------------------------------------------------------------
+; Package
+;-----------------------------------------------------------------------------
+(defrecord Package-record [image modules package-meta proto-files network sink-module module-meta version sink-config]
+  pb/Writer
+  (serialize [this os]
+    (serdes.core/write-Bytes 12  {:optimize true} (:image this) os)
+    (serdes.core/write-embedded 6 (:modules this) os)
+    (serdes.complex/write-repeated serdes.core/write-embedded 8 (:package-meta this) os)
+    (serdes.complex/write-repeated serdes.core/write-embedded 1 (:proto-files this) os)
+    (serdes.core/write-String 9  {:optimize true} (:network this) os)
+    (serdes.core/write-String 11  {:optimize true} (:sink-module this) os)
+    (serdes.complex/write-repeated serdes.core/write-embedded 7 (:module-meta this) os)
+    (serdes.core/write-UInt64 5  {:optimize true} (:version this) os)
+    (serdes.core/write-embedded 10 (:sink-config this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "sf.substreams.v1.Package"))
+
+(s/def :sf.substreams.v1.Package/image bytes?)
+
+
+
+(s/def :sf.substreams.v1.Package/network string?)
+(s/def :sf.substreams.v1.Package/sink-module string?)
+
+(s/def :sf.substreams.v1.Package/version int?)
+
+(s/def ::Package-spec (s/keys :opt-un [:sf.substreams.v1.Package/image :sf.substreams.v1.Package/network :sf.substreams.v1.Package/sink-module :sf.substreams.v1.Package/version ]))
+(def Package-defaults {:image (byte-array 0) :package-meta [] :proto-files [] :network "" :sink-module "" :module-meta [] :version 0 })
+
+(defn cis->Package
+  "CodedInputStream to Package"
+  [is]
+  (->> (tag-map Package-defaults
+         (fn [tag index]
+             (case index
+               12 [:image (serdes.core/cis->Bytes is)]
+               6 [:modules (ecis->Modules is)]
+               8 [:package-meta (serdes.complex/cis->repeated ecis->PackageMetadata is)]
+               1 [:proto-files (serdes.complex/cis->repeated com.google.protobuf/ecis->FileDescriptorProto is)]
+               9 [:network (serdes.core/cis->String is)]
+               11 [:sink-module (serdes.core/cis->String is)]
+               7 [:module-meta (serdes.complex/cis->repeated ecis->ModuleMetadata is)]
+               5 [:version (serdes.core/cis->UInt64 is)]
+               10 [:sink-config (com.google.protobuf/ecis->Any is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->Package-record)))
+
+(defn ecis->Package
+  "Embedded CodedInputStream to Package"
+  [is]
+  (serdes.core/cis->embedded cis->Package is))
+
+(defn new-Package
+  "Creates a new instance from a map, similar to map->Package except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::Package-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::Package-spec init))))]}
+  (-> (merge Package-defaults init)
+      (cond-> (some? (get init :proto-files)) (update :proto-files #(map com.google.protobuf/new-FileDescriptorProto %)))
+      (cond-> (some? (get init :modules)) (update :modules new-Modules))
+      (cond-> (some? (get init :module-meta)) (update :module-meta #(map new-ModuleMetadata %)))
+      (cond-> (some? (get init :package-meta)) (update :package-meta #(map new-PackageMetadata %)))
+      (cond-> (some? (get init :sink-config)) (update :sink-config com.google.protobuf/new-Any))
+      (map->Package-record)))
+
+(defn pb->Package
+  "Protobuf to Package"
+  [input]
+  (cis->Package (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record Package-meta {:type "sf.substreams.v1.Package" :decoder pb->Package})
 
 ;-----------------------------------------------------------------------------
 ; Module-Input-Params
@@ -749,6 +887,63 @@
   (cis->Module-Input-Store (serdes.stream/new-cis input)))
 
 (def ^:protojure.protobuf.any/record Module-Input-Store-meta {:type "sf.substreams.v1.Module-Input-Store" :decoder pb->Module-Input-Store})
+
+;-----------------------------------------------------------------------------
+; PackageMetadata
+;-----------------------------------------------------------------------------
+(defrecord PackageMetadata-record [version url name doc]
+  pb/Writer
+  (serialize [this os]
+    (serdes.core/write-String 1  {:optimize true} (:version this) os)
+    (serdes.core/write-String 2  {:optimize true} (:url this) os)
+    (serdes.core/write-String 3  {:optimize true} (:name this) os)
+    (serdes.core/write-String 4  {:optimize true} (:doc this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "sf.substreams.v1.PackageMetadata"))
+
+(s/def :sf.substreams.v1.PackageMetadata/version string?)
+(s/def :sf.substreams.v1.PackageMetadata/url string?)
+(s/def :sf.substreams.v1.PackageMetadata/name string?)
+(s/def :sf.substreams.v1.PackageMetadata/doc string?)
+(s/def ::PackageMetadata-spec (s/keys :opt-un [:sf.substreams.v1.PackageMetadata/version :sf.substreams.v1.PackageMetadata/url :sf.substreams.v1.PackageMetadata/name :sf.substreams.v1.PackageMetadata/doc ]))
+(def PackageMetadata-defaults {:version "" :url "" :name "" :doc "" })
+
+(defn cis->PackageMetadata
+  "CodedInputStream to PackageMetadata"
+  [is]
+  (->> (tag-map PackageMetadata-defaults
+         (fn [tag index]
+             (case index
+               1 [:version (serdes.core/cis->String is)]
+               2 [:url (serdes.core/cis->String is)]
+               3 [:name (serdes.core/cis->String is)]
+               4 [:doc (serdes.core/cis->String is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->PackageMetadata-record)))
+
+(defn ecis->PackageMetadata
+  "Embedded CodedInputStream to PackageMetadata"
+  [is]
+  (serdes.core/cis->embedded cis->PackageMetadata is))
+
+(defn new-PackageMetadata
+  "Creates a new instance from a map, similar to map->PackageMetadata except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::PackageMetadata-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::PackageMetadata-spec init))))]}
+  (-> (merge PackageMetadata-defaults init)
+      (map->PackageMetadata-record)))
+
+(defn pb->PackageMetadata
+  "Protobuf to PackageMetadata"
+  [input]
+  (cis->PackageMetadata (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record PackageMetadata-meta {:type "sf.substreams.v1.PackageMetadata" :decoder pb->PackageMetadata})
 
 ;-----------------------------------------------------------------------------
 ; Module-Output

@@ -3,6 +3,7 @@ syntax = "proto3";
 package geo.example.something;
 
 import "sf/substreams/rpc/v2/service.proto";
+import "sf/substreams/v1/package.proto";
 
 message Foo {
     string bar = 1;
