@@ -9,7 +9,8 @@
                   [com.github.seancorfield/next.jdbc "1.3.894"]
                   [org.postgresql/postgresql "42.6.0"]
                   [com.github.seancorfield/honeysql "2.4.1078"]
-                  [com.zaxxer/HikariCP "5.0.1"]]
+                  [com.zaxxer/HikariCP "5.0.1"]
+                  [lynxeyes/dotenv "1.1.0"]]
   :main ^:skip-aot lein-test.core
   :target-path "target/%s"
   :profiles {:uberjar {:aot :all}})

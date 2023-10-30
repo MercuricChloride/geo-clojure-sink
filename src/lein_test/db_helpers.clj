@@ -1,15 +1,16 @@
 (ns lein-test.db-helpers
-  (:require
-   [lein-test.constants :refer [ENTITIES ATTRIBUTES]]
-   [honey.sql :as sql]
-   [honey.sql.helpers :as h]
-   [next.jdbc :as jdbc]
-   [next.jdbc.connection :as connection])
+  (:require [honey.sql :as sql]
+            [honey.sql.helpers :as h]
+            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
+            [next.jdbc :as jdbc]
+            [next.jdbc.connection :as connection]
+            [dotenv :refer [env app-env]])
   (:import (com.zaxxer.hikari HikariDataSource)))
 
 (def ds (connection/->pool HikariDataSource
-                           {:dbtype "postgres" :dbname "geo-global" :username "postgres" :password "fart" :maximumPoolSize 10
+                           {:dbtype "postgres" :dbname (env "GEO_DB_NAME") :username (env "GEO_DB_USERNAME") :password (env "GEO_DB_PASSWORD") :maximumPoolSize 10
                             :dataSourceProperties {:socketTimeout 30}}))
+
 
 (defn try-execute [query]
   (try
@@ -63,9 +64,9 @@
   "Returns a seq of all names for entities"
   []
   (try-execute (-> (h/select-distinct-on [:entity_id] :entity_id :string_value)
-      (h/from :triples)
-      (h/where :and [:= :attribute_id (:id (:name ATTRIBUTES))] [:= :value_type "string"])
-      (sql/format))))
+                   (h/from :triples)
+                   (h/where :and [:= :attribute_id (:id (:name ATTRIBUTES))] [:= :value_type "string"])
+                   (sql/format))))
 
 (time (all-names))
 
@@ -73,10 +74,10 @@
   "Upserts all names for entities"
   [names]
   (try-execute (-> (h/insert-into :entities)
-                     (h/values (into [] (map (fn [name]{:id (:triples/entity_id name)
-                                                         :name (:triples/string_value name)}) names)))
-                     (h/on-conflict :id (h/do-update-set :name))
-                     (sql/format {:pretty true}))))
+                   (h/values (into [] (map (fn [name] {:id (:triples/entity_id name)
+                                                       :name (:triples/string_value name)}) names)))
+                   (h/on-conflict :id (h/do-update-set :name))
+                   (sql/format {:pretty true}))))
 
 ;(def test-names (take 10000 (all-names)))
 
@@ -102,30 +103,8 @@
   (doseq [space (all-spaces)]
     (make-schema (:spaces/address space))))
 
-;; Helpers to reset the db for testing
-(def nuke-actions (-> (h/delete-from :actions)
-                      (h/where [:= :value-type nil])
-                      (sql/format {:pretty true})))
-
-(def nuke-entities (-> (h/delete-from :entities)
-                       (h/where [:= :value-type nil])
-                       (sql/format {:pretty true})))
-
-(def nuke-entity-types (-> (h/delete-from :entity_types)
-                           (h/where [:not= :id ""])
-                           (sql/format {:pretty true})))
-
-(def nuke-entity-attributes (-> (h/delete-from :entity_attributes)
-                                (h/where [:not= :id ""])
-                                (sql/format {:pretty true})))
-
-(def nuke-spaces (-> (h/delete-from :spaces)
-                     (h/where [:not= :id ""])
-                     (sql/format {:pretty true})))
-
-(def nuke-triples (-> (h/delete-from :triples)
-                      (h/where [:= :is_protected false])
-                      (sql/format {:pretty true})))
+(defn- drop-table [table-name]
+  (sql/format [:raw (str "DROP TABLE " table-name " CASCADE")]))
 
 (def get-schemas  (-> (h/select :schema-name)
                       (h/from :information_schema.schemata)
@@ -137,10 +116,10 @@
     (try-execute (sql/format [:raw (str "DROP SCHEMA IF EXISTS \"" (:schemata/schema_name schema) "\" CASCADE")] {:pretty true}))))
 
 (defn nuke-db []
-  (jdbc/execute! ds nuke-actions)
-  (jdbc/execute! ds nuke-entities)
-  (jdbc/execute! ds nuke-entity-types)
-  (jdbc/execute! ds nuke-entity-attributes)
-  (jdbc/execute! ds nuke-triples)
-  (jdbc/execute! ds nuke-spaces)
+  (jdbc/execute! ds (drop-table "actions"))
+  (jdbc/execute! ds (drop-table "entities"))
+  (jdbc/execute! ds (drop-table "entity_types"))
+  (jdbc/execute! ds (drop-table "entity_attributes"))
+  (jdbc/execute! ds (drop-table "triples"))
+  (jdbc/execute! ds (drop-table "spaces"))
   (nuke-schemas))
