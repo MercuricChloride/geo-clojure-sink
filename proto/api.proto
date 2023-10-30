@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package geo.example.something;
+
+import "sf/substreams/rpc/v2/service.proto";
+
+message Foo {
+    string bar = 1;
+}
