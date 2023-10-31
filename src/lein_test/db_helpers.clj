@@ -139,15 +139,14 @@
   (doseq [schema (try-execute get-schemas)]
     (try-execute (sql/format [:raw (str "DROP SCHEMA IF EXISTS \"" (:schemata/schema_name schema) "\" CASCADE")] {:pretty true}))))
 
+
 (defn nuke-db []
-  (jdbc/execute! ds (drop-table "actions"))
-  (jdbc/execute! ds (drop-table "entities"))
-  (jdbc/execute! ds (drop-table "triples"))
-  (jdbc/execute! ds (drop-table "spaces"))
-  (nuke-schemas))
+  (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/sql/nuke.sql")])))
 
-(jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/sql/nuke.sql")]))
-(jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/migrations/001_bootstrap.sql")]))
+;; (nuke-db)
+
+(defn bootstrap-db []
+  (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/migrations/001_bootstrap.sql")])))
 
 
-(nuke-db)
+;; (nuke-db)
