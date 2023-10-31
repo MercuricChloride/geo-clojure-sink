@@ -129,16 +129,16 @@
 
 ;(nuke-db)
 
- ;; (time
- ;;  (do
- ;;    (time (doall (map #(populate-db :entities %) files)))
+ (time
+  (do
+    (time (doall (map #(populate-db :entities %) files)))
  ;;    (time (doall (map #(populate-db :triples %) files)))
  ;;    (time (doall (map #(populate-db :spaces %) files)))
  ;;    (time (doall (map #(populate-db :types %) files)))
  ;;    (time (doall (map #(populate-db :attributes %) files)))
  ;;    (time (make-space-schemas))
  ;;    (time (create-type-tables))
- ;;    (println "done with everything")))
+    (println "done with everything")))
 
 (def template-function-str
     "CREATE OR REPLACE FUNCTION \"type-$$ENTITY_ID$$\"(ent_id text)

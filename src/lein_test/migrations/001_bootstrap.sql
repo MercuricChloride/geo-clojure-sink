@@ -131,17 +131,26 @@ CREATE TABLE public.versions (
     actions text[]
 );
 
+-- Disable All Triggers so we can play fast and loose with foreign keys
+ALTER TABLE public.accounts DISABLE TRIGGER ALL;
+ALTER TABLE public.actions DISABLE TRIGGER ALL;
+ALTER TABLE public.entities DISABLE TRIGGER ALL;
+ALTER TABLE public.log_entries DISABLE TRIGGER ALL;
+ALTER TABLE public.proposals DISABLE TRIGGER ALL;
+ALTER TABLE public.proposed_versions DISABLE TRIGGER ALL;
+ALTER TABLE public.triples DISABLE TRIGGER ALL;
+ALTER TABLE public.subspaces DISABLE TRIGGER ALL;
+ALTER TABLE public.versions DISABLE TRIGGER ALL;
+
+
 ALTER TABLE ONLY public.accounts
     ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);
-
 
 ALTER TABLE ONLY public.actions
     ADD CONSTRAINT actions_pkey PRIMARY KEY (id);
 
-
 ALTER TABLE ONLY public.cursors
     ADD CONSTRAINT cursors_pkey PRIMARY KEY (id);
-
 
 ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entities_pkey PRIMARY KEY (id);
