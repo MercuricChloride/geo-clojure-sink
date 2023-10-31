@@ -31,9 +31,4 @@ BEGIN
         EXECUTE 'DROP TYPE IF EXISTS ' || r.typname || ' CASCADE';
     END LOOP;
 
-    -- drop all extensions (be careful with this as it can affect functions and types not created by you)
-    FOR r IN (SELECT extname FROM pg_extension) LOOP
-        EXECUTE 'DROP EXTENSION IF EXISTS ' || r.extname || ' CASCADE';
-    END LOOP;
-
 END $$;

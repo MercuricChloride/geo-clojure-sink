@@ -9,7 +9,6 @@ SET xmloption = content;
 SET client_min_messages = warning;
 SET row_security = off;
 
-
 CREATE TABLE public.accounts (
     id text NOT NULL,
     avatar text
