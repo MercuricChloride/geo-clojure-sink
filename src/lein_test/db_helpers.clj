@@ -1,5 +1,6 @@
 (ns lein-test.db-helpers
   (:require [honey.sql :as sql]
+            [clojure.string]
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [next.jdbc :as jdbc]
@@ -105,12 +106,11 @@
   (sql/format [:raw (str "DROP TABLE " table-name " CASCADE")]))
 
 (defn- create-table [table-name columns]
-  (str "CREATE TABLE " table-name " ("
+  (sql/format [:raw (str "CREATE TABLE " table-name " ("
        (clojure.string/join ", "
                             (map (fn [[name type]]
                                    (str name " " type)) columns))
-       ");"))
-
+       ");")]))
 
 (def get-schemas  (-> (h/select :schema-name)
                       (h/from :information_schema.schemata)
@@ -118,23 +118,22 @@
                       (sql/format {:pretty true})))
 
 (defn create-tables []
-  (let [tables {"actions" [["action_id" "INT"], ["action_name" "VARCHAR(255)"]]
-                "entities" [["entity_id" "INT"], ["entity_name" "VARCHAR(255)"]]
-                "triples" [["triple_id" "INT"], ["triple_value" "VARCHAR(255)"]]
-                "spaces" [["space_id" "INT"], ["space_name" "VARCHAR(255)"]]}]
+  (let [tables {"actions" [["id" "TEXT"], ["action_name" "VARCHAR(255)"]]
+                "entities" [["id" "TEXT"], ["entity_name" "VARCHAR(255)"]]
+                "triples" [["id" "TEXT"], ["triple_value" "VARCHAR(255)"]]
+                "spaces" [["id" "TEXT"], ["space_name" "VARCHAR(255)"]]}]
     (doseq [[table-name columns] tables]
       (let [stmt (create-table table-name columns)]
-        (println stmt)  ; Print the statement
-        (jdbc/execute! ds stmt)))))(defn create-tables []
-  (doseq [stmt (concat (create-table "actions" [["name" "text"]])
-                       (create-table "entities" [])
-                       (create-table "triples" [])
-                       (create-table "spaces" []))]
-    (println stmt)  ; Print the statement
-    (jdbc/execute! ds stmt)))
+        (jdbc/execute! ds stmt)))))
 
+;; (defn create-tables []
+;;   (doseq [stmt (concat (create-table "actions" [["name" "text"]])
+;;                        (create-table "entities" [])
+;;                        (create-table "triples" [])
+;;                        (create-table "spaces" []))]
+;;     (println stmt)  ; Print the statement
+;;     (jdbc/execute! ds stmt)))
 
-(create-tables)
 
 (defn nuke-schemas []
   (doseq [schema (try-execute get-schemas)]
@@ -146,3 +145,7 @@
   (jdbc/execute! ds (drop-table "triples"))
   (jdbc/execute! ds (drop-table "spaces"))
   (nuke-schemas))
+
+(sql/format [:raw (slurp "init.sql")])
+
+(nuke-db)
