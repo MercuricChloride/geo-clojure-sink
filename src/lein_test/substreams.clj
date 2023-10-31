@@ -3,7 +3,6 @@
   (:require [sf.substreams.rpc.v2 :as rpc]
             [sf.substreams.rpc.v2.Stream.client :as stream]
             [protojure.grpc.client.providers.http2 :as grpc.http2]
-            [com.example.addressbook.Greeter.client :as greeter]
             [geo.clojure.sink :as geo]
             [dotenv :refer [env app-env]]
             [clojure.core.async :as async]

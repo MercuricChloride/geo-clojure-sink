@@ -67,7 +67,7 @@
                    (h/where :and [:= :attribute_id (:id (:name ATTRIBUTES))] [:= :value_type "string"])
                    (sql/format))))
 
-(time (all-names))
+;(time (all-names))
 
 (defn upsert-names
   "Upserts all names for entities"
@@ -91,7 +91,6 @@
 ;;                      (h/where [:= :id (:triples/entity_id test-name)])
 ;;                      (sql/format {:pretty true}))))
 
-
 (defn- make-schema
   "Creates a schema"
   [space]
@@ -105,10 +104,23 @@
 (defn- drop-table [table-name]
   (sql/format [:raw (str "DROP TABLE " table-name " CASCADE")]))
 
+(defn- create-table [table-name columns]
+  (let [create-statement (str "CREATE TABLE " table-name)
+        alter-statements (map (fn [[name type]]
+                                (str "ALTER TABLE " table-name " ADD COLUMN " name " " type))
+                              columns)]
+    (concat [create-statement] alter-statements)))
+
 (def get-schemas  (-> (h/select :schema-name)
                       (h/from :information_schema.schemata)
                       (h/where [:like :schema_name "0x%"])
                       (sql/format {:pretty true})))
+
+(defn create-tables []
+  (jdbc/execute! ds (create-table "actions"))
+  (jdbc/execute! ds (create-table "entities"))
+  (jdbc/execute! ds (create-table "triples"))
+  (jdbc/execute! ds (create-table "spaces")))
 
 (defn nuke-schemas []
   (doseq [schema (try-execute get-schemas)]
@@ -117,8 +129,6 @@
 (defn nuke-db []
   (jdbc/execute! ds (drop-table "actions"))
   (jdbc/execute! ds (drop-table "entities"))
-  (jdbc/execute! ds (drop-table "entity_types"))
-  (jdbc/execute! ds (drop-table "entity_attributes"))
   (jdbc/execute! ds (drop-table "triples"))
   (jdbc/execute! ds (drop-table "spaces"))
   (nuke-schemas))
