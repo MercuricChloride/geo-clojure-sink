@@ -105,11 +105,12 @@
   (sql/format [:raw (str "DROP TABLE " table-name " CASCADE")]))
 
 (defn- create-table [table-name columns]
-  (let [create-statement (str "CREATE TABLE " table-name)
-        alter-statements (map (fn [[name type]]
-                                (str "ALTER TABLE " table-name " ADD COLUMN " name " " type))
-                              columns)]
-    (concat [create-statement] alter-statements)))
+  (str "CREATE TABLE " table-name " ("
+       (clojure.string/join ", "
+                            (map (fn [[name type]]
+                                   (str name " " type)) columns))
+       ");"))
+
 
 (def get-schemas  (-> (h/select :schema-name)
                       (h/from :information_schema.schemata)
@@ -117,10 +118,18 @@
                       (sql/format {:pretty true})))
 
 (defn create-tables []
-  (jdbc/execute! ds (create-table "actions"))
-  (jdbc/execute! ds (create-table "entities"))
-  (jdbc/execute! ds (create-table "triples"))
-  (jdbc/execute! ds (create-table "spaces")))
+  (let [tables {"actions" [["action_id" "INT"], ["action_name" "VARCHAR(255)"]]
+                "entities" [["entity_id" "INT"], ["entity_name" "VARCHAR(255)"]]
+                "triples" [["triple_id" "INT"], ["triple_value" "VARCHAR(255)"]]
+                "spaces" [["space_id" "INT"], ["space_name" "VARCHAR(255)"]]}]
+    (doseq [[table-name columns] tables]
+      (let [stmt (create-table table-name columns)]
+        (println stmt)  ; Print the statement
+        (jdbc/execute! ds stmt)))))
+
+
+
+(create-tables)
 
 (defn nuke-schemas []
   (doseq [schema (try-execute get-schemas)]
