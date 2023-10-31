@@ -156,9 +156,6 @@ ALTER TABLE ONLY public.proposals
 ALTER TABLE ONLY public.proposed_versions
     ADD CONSTRAINT proposed_versions_pkey PRIMARY KEY (id);
 
-ALTER TABLE ONLY public.seaql_migrations
-    ADD CONSTRAINT seaql_migrations_pkey PRIMARY KEY (version);
-
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_address_key UNIQUE (address);
 
@@ -173,12 +170,6 @@ ALTER TABLE ONLY public.triples
 
 ALTER TABLE ONLY public.versions
     ADD CONSTRAINT versions_pkey PRIMARY KEY (id);
-
-ALTER TABLE ONLY public.entity_attributes
-    ADD CONSTRAINT entity_attributes_attribute_of_fkey FOREIGN KEY (attribute_of) REFERENCES public.entities(id);
-
-ALTER TABLE ONLY public.entity_attributes
-    ADD CONSTRAINT entity_attributes_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
 
 ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entity_defined_in_spaces_address_fkey FOREIGN KEY (defined_in) REFERENCES public.spaces(address);

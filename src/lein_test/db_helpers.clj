@@ -146,6 +146,8 @@
   (jdbc/execute! ds (drop-table "spaces"))
   (nuke-schemas))
 
-(sql/format [:raw (slurp "./migrations/001_bootstrap.sql")])
+(jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/sql/nuke.sql")]))
+(jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/migrations/001_bootstrap.sql")]))
+
 
 (nuke-db)
