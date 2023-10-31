@@ -43,7 +43,8 @@ CREATE TABLE public.entities (
     name character varying,
     description character varying,
     is_type boolean DEFAULT false,
-    defined_in text NOT NULL,
+    -- defined_in text NOT NULL,
+    defined_in text,
     value_type text,
     version text,
     versions text[]
