@@ -1,10 +1,18 @@
 syntax = "proto3";
 
-package geo.example.something;
+package geo.clojure.sink;
 
 import "sf/substreams/rpc/v2/service.proto";
 import "sf/substreams/v1/package.proto";
 
-message Foo {
-    string bar = 1;
+message EntryAdded {
+  string id = 1; //{block-number}-{tx-hash}-{log-index}
+  string index = 2;
+  string uri = 3;
+  string author = 4;
+  string space = 5;
+}
+
+message EntriesAdded {
+  repeated EntryAdded entries = 1;
 }
