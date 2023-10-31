@@ -125,8 +125,13 @@
     (doseq [[table-name columns] tables]
       (let [stmt (create-table table-name columns)]
         (println stmt)  ; Print the statement
-        (jdbc/execute! ds stmt)))))
-
+        (jdbc/execute! ds stmt)))))(defn create-tables []
+  (doseq [stmt (concat (create-table "actions" [["name" "text"]])
+                       (create-table "entities" [])
+                       (create-table "triples" [])
+                       (create-table "spaces" []))]
+    (println stmt)  ; Print the statement
+    (jdbc/execute! ds stmt)))
 
 
 (create-tables)
