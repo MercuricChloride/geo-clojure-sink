@@ -7,15 +7,27 @@
     (cond
       (= v "string") :string_value
       (= v "entity") :entity_value)))
+; TODO UPDATE THIS TO SUPPORT NUMBERS AS WELl
 
 (defn ->action
   "Takes in an action and returns an entry in the actions table"
-  [action]
-  (let [type (:type action) entityId (:entityId action) attributeId (:attributeId action)]
+  [action proposed-version-id]
+  (let [type (:type action)
+        entityId (:entityId action)
+        attributeId (:attributeId action)
+        value-key (value-type (:value action))
+        value-id (:id (:value action))
+        value (:value (:value action))
+        ]
     {:id (str type "-" entityId "-" attributeId)
      :action_type type
      :entity entityId
-     :attribute attributeId}))
+     :attribute attributeId
+     value-key (if (= value-key :entity_value) value-id value)
+     :value_id value-id
+     :value_type (:type (:value action))
+     :proposed_version_id proposed-version-id
+     }))
 
 (defn ->triple
   "Takes in an action and returns an entry in the triples table"

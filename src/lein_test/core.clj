@@ -1,6 +1,7 @@
 (ns lein-test.core
   (:gen-class)
   (:require
+
    [cheshire.core :as ch]
    [lein-test.constants :refer [ENTITIES]]
    [clojure.string :as cstr]
@@ -83,7 +84,7 @@
   "Takes in a seq of actions and populates the `actions` table"
   [actions]
   (-> (h/insert-into :public/actions)
-      (h/values (into [] (map ->action actions)))
+      (h/values (into [] actions))
       (h/on-conflict :id (h/do-nothing))
       (sql/format {:pretty true})
       try-execute))
@@ -99,7 +100,7 @@
 (defn populate-db [type actions]
   (cond (= type :entities) (populate-entities actions)
         (= type :triples) (populate-triples actions)
-        (= type :actions) (populate-actions actions)
+        ;(= type :actions) (populate-actions actions)
         (= type :spaces) (populate-spaces actions)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
@@ -170,51 +171,89 @@
 ;; (try-execute (sql/format [:raw all-attribute-function]))
 ;; (try-execute (sql/format [:raw (type-function "type" "types")]))
 
-(defn ->proposed-version
+(defn ->proposed-version+actions
   [action-map created-at-block timestamp author proposal-id]
-  {:id (str (java.util.UUID/randomUUID))
-   :name "update-me" ;TODO UPDATE THIS
-   :description "update-me" ;TODO UPDATE THIS
-   :created-at timestamp
-   :created-at-block created-at-block
-   :created-by author
-   :entity (:entityId (first action-map))
-   :proposal-id proposal-id
-   })
+  (let [proposed-version-id (str (java.util.UUID/randomUUID))]
+    [{:id proposed-version-id
+      :name "update-me" ;TODO UPDATE THIS
+      :description "update-me" ;TODO UPDATE THIS
+      :created-at timestamp
+      :created-at-block created-at-block
+      :created-by author
+      :entity (:entityId (first action-map))
+      :proposal-id proposal-id
+      }
+     (map #(->action % proposed-version-id) action-map)]
+    )
+  )
 
 (defn new-proposal
-  [created-at-block timestamp author proposal-id]
+  [created-at-block timestamp author proposal-id space]
   {:id proposal-id
    :name "update-me"
    :description "update-me"
    :created-at timestamp
    :created-at-block created-at-block
    :created-by author
+   :space space
    :status "APPROVED" ;NOTE THIS IS HARDCODED FOR NOW UNTIL GOVERNANCE FINALIZED
    })
+
+(defn populate-proposal
+  [proposal]
+  (try-execute (-> (h/insert-into :public/proposals)
+      (h/values [proposal])
+      (h/on-conflict :id (h/do-nothing))
+      (sql/format))))
+
+(defn populate-proposed-version
+  [proposed-version]
+  (try-execute (-> (h/insert-into :public/proposed-versions)
+      (h/values [proposed-version])
+      (h/on-conflict :id (h/do-nothing))
+      (sql/format))))
 
 (defn entry->proposal
   [log-entry]
   (let [first-entry (first log-entry)
         author (:author first-entry) ;NOTE the author will be the same for all triples in an action
+        space (:space first-entry)
         block-number (:block-number first-entry)
         proposal-id (str (java.util.UUID/randomUUID))
         entity-ids (into #{} (map :entityId log-entry))
         action-map (map #(entry->actions log-entry %) entity-ids)
-        proposal (new-proposal block-number block-number author proposal-id)
-        proposals (map #(->proposed-version % block-number block-number author proposal-id) action-map)]
+        proposal (new-proposal block-number block-number author proposal-id space)
+        proposed-versions+actions (map #(->proposed-version+actions % block-number block-number author proposal-id) action-map)]
     ; insert proposal into proposals table pointing
         ; insert proposed-versions into proposed-versions table pointing to ^
             ; insert actions into actions table pointing to ^
 
-    [proposal proposals]
-    ))
+    [proposal proposed-versions+actions]))
 
-(entry->proposal (nth files 100))
+(defn- populate-proposed-version+actions
+  [input]
+  (let [[proposed-version actions] input]
+    (populate-proposed-version proposed-version)
+    (populate-actions actions)))
+
+(defn populate-entry
+  [log-entry]
+  (let [[proposal proposed-version+actions] (entry->proposal log-entry)]
+    (populate-proposal proposal)
+    (map populate-proposed-version+actions proposed-version+actions)))
+
+(populate-entry (first files))
+
+;; (let [[proposal proposed-version+actions] (entry->proposal (first files))]
+;;   (doseq
+;;     (populate-proposal proposal)
+;;     (map #(populate-proposed-versions (first %)) proposed-version+actions)
+;;     (map #(populate-actions (second %)) proposed-version+actions)))
+
 
 
 (defn ipfs-fetch
   [cid]
   (slurp (str "https://ipfs.network.thegraph.com/api/v0/cat?arg=" cid)))
 
-(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))
+;(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))
