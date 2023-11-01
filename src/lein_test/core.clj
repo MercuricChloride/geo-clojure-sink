@@ -20,9 +20,9 @@
 (defn- validate-actions
   ([actions]
    (filter #(action/valid-action? %) actions))
-  ([space author actions]
+  ([space author block-number actions]
    (->> (filter #(action/valid-action? %) actions)
-        (map #(assoc % :space space :author author)))))
+        (map #(assoc % :space space :author author :block-number block-number)))))
 
 (defn- json->actions
   ([path]
@@ -31,11 +31,11 @@
   ([prefix path]
    (let [json (slurp (str prefix path))]
      (validate-actions ((ch/parse-string json true) :actions))))
-  ([prefix path space author]
+  ([prefix path space author block-number]
    (let [json (slurp (str prefix path))]
      (->> (ch/parse-string json true)
           :actions
-          (validate-actions space author)))))
+          (validate-actions space author block-number)))))
 
 (defn- extract-file-meta [filename]
   (let [parts (cstr/split filename #"_")]
@@ -55,8 +55,7 @@
                 (map #(cstr/replace % #"./action_cache/" ""))
                 (map extract-file-meta)
                 sort-files
-                ;(take 200)
-                (map #(json->actions "./action_cache/" (:filename %) (:space %) (:author %)))))
+                (map #(json->actions "./action_cache/" (:filename %) (:space %) (:author %) (:block %)))))
 
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
@@ -163,6 +162,59 @@
     END;
     $$ LANGUAGE plpgsql STRICT STABLE;")
 
+(defn entry->actions
+  [entry entity-id]
+  (filter #(= (:entityId %) entity-id) entry))
+
 ;; (try-execute (sql/format [:raw all-type-function]))
 ;; (try-execute (sql/format [:raw all-attribute-function]))
 ;; (try-execute (sql/format [:raw (type-function "type" "types")]))
+
+(defn ->proposed-version
+  [action-map created-at-block timestamp author proposal-id]
+  {:id (str (java.util.UUID/randomUUID))
+   :name "update-me" ;TODO UPDATE THIS
+   :description "update-me" ;TODO UPDATE THIS
+   :created-at timestamp
+   :created-at-block created-at-block
+   :created-by author
+   :entity (:entityId (first action-map))
+   :proposal-id proposal-id
+   })
+
+(defn new-proposal
+  [created-at-block timestamp author proposal-id]
+  {:id proposal-id
+   :name "update-me"
+   :description "update-me"
+   :created-at timestamp
+   :created-at-block created-at-block
+   :created-by author
+   :status "APPROVED" ;NOTE THIS IS HARDCODED FOR NOW UNTIL GOVERNANCE FINALIZED
+   })
+
+(defn entry->proposal
+  [log-entry]
+  (let [first-entry (first log-entry)
+        author (:author first-entry) ;NOTE the author will be the same for all triples in an action
+        block-number (:block-number first-entry)
+        proposal-id (str (java.util.UUID/randomUUID))
+        entity-ids (into #{} (map :entityId log-entry))
+        action-map (map #(entry->actions log-entry %) entity-ids)
+        proposal (new-proposal block-number block-number author proposal-id)
+        proposals (map #(->proposed-version % block-number block-number author proposal-id) action-map)]
+    ; insert proposal into proposals table pointing
+        ; insert proposed-versions into proposed-versions table pointing to ^
+            ; insert actions into actions table pointing to ^
+
+    [proposal proposals]
+    ))
+
+(entry->proposal (nth files 100))
+
+
+(defn ipfs-fetch
+  [cid]
+  (slurp (str "https://ipfs.network.thegraph.com/api/v0/cat?arg=" cid)))
+
+(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))

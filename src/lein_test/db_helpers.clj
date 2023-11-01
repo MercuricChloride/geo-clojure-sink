@@ -175,8 +175,7 @@
                                                                 :deleted false})) ATTRIBUTES)))
                         sql/format)))
 
-
-(bootstrap-db)
+;(bootstrap-db)
 ;(bootstrap-entities)
 
 ;(nuke-db)
