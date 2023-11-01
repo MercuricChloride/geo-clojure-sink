@@ -122,54 +122,57 @@
 
 (defn bootstrap-entities
   []
+  ;; creates the entities
+  (jdbc/execute! ds (-> (h/insert-into :public/entities)
+                        (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                                                               {:id (:id entity)
+                                                                :name (:name entity)
+                                                                :is_type true
+                                                                :defined_in ROOT-SPACE-ADDRESS})) ENTITIES)))
+                        sql/format))
 
-  )
+  ;; creates the attributes
+  (jdbc/execute! ds (-> (h/insert-into :public/entities)
+                        (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                                                               {:id (:id entity)
+                                                                :name (:name entity)
+                                                                :is_type true
+                                                                :defined_in ROOT-SPACE-ADDRESS
+                                                                :value_type (:id ((:value-type entity) ENTITIES))})) ATTRIBUTES)))
+                        sql/format))
 
-(jdbc/execute! ds (-> (h/insert-into :public/entities)
-                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
-                                           {:id (:id entity)
-                                            :name (:name entity)
-                                            :is_type true
-                                            :defined_in ROOT-SPACE-ADDRESS})) ENTITIES)))
-                      sql/format))
+  ;; creates the triples giving the entities a type of type
+  (jdbc/execute! ds (-> (h/insert-into :public/triples)
+                        (h/values (into [] (map (fn [entity] (let [entity (second entity)
+                                                                   entity-id (:id entity)
+                                                                   attribute-id (:id (:type ATTRIBUTES))
+                                                                   value-id (:id (:schema-type ENTITIES))]
+                                                               {:id (str entity-id "-" attribute-id "-" value-id)
+                                                                :entity_id entity-id
+                                                                :attribute_id attribute-id
+                                                                :value_id value-id
+                                                                :value_type "entity"
+                                                                :entity_value value-id
+                                                                :defined_in ROOT-SPACE-ADDRESS
+                                                                :is_protected true
+                                                                :deleted false})) ENTITIES)))
+                        sql/format))
 
-(jdbc/execute! ds (-> (h/insert-into :public/entities)
-                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
-                                           {:id (:id entity)
-                                            :name (:name entity)
-                                            :is_type true
-                                            :defined_in ROOT-SPACE-ADDRESS
-                                            :value_type (:id ((:value-type entity) ENTITIES))})) ATTRIBUTES)))
-                      sql/format))
+  ;; creates the triples giving the entities a type of attribute
+  (jdbc/execute! ds (-> (h/insert-into :public/triples)
+                        (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                                                               {:id (str (java.util.UUID/randomUUID))
+                                                                :entity_id (:id entity)
+                                                                :attribute_id (:id (:type ATTRIBUTES))
+                                                                :value_id (:id (:attribute ENTITIES))
+                                                                :value_type "entity"
+                                                                :entity_value (:id (:attribute ENTITIES))
+                                                                :defined_in ROOT-SPACE-ADDRESS
+                                                                :is_protected true
+                                                                :deleted false})) ATTRIBUTES)))
+                        sql/format)))
 
-(jdbc/execute! ds (-> (h/insert-into :public/triples)
-                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
-                                           {:id (str (java.util.UUID/randomUUID))
-                                            :entity_id (:id entity)
-                                            :attribute_id (:id (:type ATTRIBUTES))
-                                            :value_id (:id (:schema-type ENTITIES))
-                                            :value_type "entity"
-                                            :entity_value (:id (:schema-type ENTITIES))
-                                            :defined_in ROOT-SPACE-ADDRESS
-                                            :is_protected true
-                                            :deleted false
-                                            })) ENTITIES)))
-                      sql/format))
 
-(jdbc/execute! ds (-> (h/insert-into :public/triples)
-                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
-                                           {:id (str (java.util.UUID/randomUUID))
-                                            :entity_id (:id entity)
-                                            :attribute_id (:id (:type ATTRIBUTES))
-                                            :value_id (:id (:attribute ENTITIES))
-                                            :value_type "entity"
-                                            :entity_value (:id (:attribute ENTITIES))
-                                            :defined_in ROOT-SPACE-ADDRESS
-                                            :is_protected true
-                                            :deleted false
-                                            })) ATTRIBUTES)))
-                      sql/format))
-
-(bootstrap-db)
+;(bootstrap-db)
 
 ;(nuke-db)

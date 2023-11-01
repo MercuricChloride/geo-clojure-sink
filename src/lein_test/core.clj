@@ -74,7 +74,7 @@
 (defn populate-triples
   "Takes in a seq of actions and populates the `triples` table"
   [actions]
-  (-> (h/insert-into :triples)
+  (-> (h/insert-into :public/triples)
       (h/values (map ->triple actions))
       (h/on-conflict :id (h/do-nothing))
       (sql/format {:pretty true})
@@ -83,29 +83,11 @@
 (defn populate-actions
   "Takes in a seq of actions and populates the `actions` table"
   [actions]
-  (-> (h/insert-into :actions)
+  (-> (h/insert-into :public/actions)
       (h/values (into [] (map ->action actions)))
       (h/on-conflict :id (h/do-nothing))
       (sql/format {:pretty true})
       try-execute))
-
-(defn populate-types
-  "Takes in a seq of actions and populates the `entity_types` table"
-  [actions]
-  (let [filtered (into [] (filter #(= (:attributeId %) "type") actions))]
-    (-> (h/insert-into :entity_types)
-        (h/values (into [] (map ->entity-type filtered)))
-        (h/on-conflict :id (h/do-nothing))
-        (sql/format {:pretty true})
-        try-execute)))
-
-(defn populate-attributes [actions]
-  (let [filtered (into [] (filter #(= (:attributeId %) "01412f83-8189-4ab1-8365-65c7fd358cc1") actions))]
-    (-> (h/insert-into :entity_attributes)
-        (h/values (into [] (map ->entity-attribute filtered)))
-        (h/on-conflict :id (h/do-nothing))
-        (sql/format {:pretty true}),
-        try-execute)))
 
 (defn populate-spaces [actions]
   (let [filtered (into [] (filter #(= (:attributeId %) "space") actions))]
@@ -119,31 +101,15 @@
   (cond (= type :entities) (populate-entities actions)
         (= type :triples) (populate-triples actions)
         (= type :actions) (populate-actions actions)
-        (= type :types) (populate-types actions)
-        (= type :attributes) (populate-attributes actions)
         (= type :spaces) (populate-spaces actions)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
-;; (try-execute
-;;  (sql/format [:raw "CREATE INDEX idx_entity_attribute ON public.triples(entity_id, attribute_id);"]))
-;; (try-execute
-;;  (sql/format [:raw "CREATE INDEX idx_entity_attribute_value_id ON public.triples(entity_id, attribute_id, value_id);"]))
-
-;(h/add-index :idx-entity-attribute)
-;(h/alter)
-
-(nuke-db)
-(bootstrap-db)
-
  (time
   (do
-    ;(time (doall (map #(populate-db :entities %) files)))
-    ;(time (doall (map #(populate-db :triples %) (take 100 files))))
+    (time (doall (map #(populate-db :entities %) files)))
+    (time (doall (map #(populate-db :triples %) files)))
  ;;    (time (doall (map #(populate-db :spaces %) files)))
- ;;    (time (doall (map #(populate-db :types %) files)))
- ;;    (time (doall (map #(populate-db :attributes %) files)))
  ;;    (time (make-space-schemas))
- ;;    (time (create-type-tables))
     (println "done with everything")))
 
 (def template-function-str
