@@ -55,7 +55,7 @@
                 (map #(cstr/replace % #"./action_cache/" ""))
                 (map extract-file-meta)
                 sort-files
-                (take 100)
+                ;(take 200)
                 (map #(json->actions "./action_cache/" (:filename %) (:space %) (:author %)))))
 
 (defn populate-entities
@@ -65,8 +65,7 @@
                           (h/values (into [] (map ->entity actions)))
                           (h/on-conflict :id (h/do-nothing))
                           (sql/format {:pretty true})
-                          try-execute
-      )]
+                          try-execute)]
     (println "Generated SQL:" formatted-sql)
     formatted-sql
     ))
