@@ -104,13 +104,13 @@
         (= type :spaces) (populate-spaces actions)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
- (time
-  (do
-    (time (doall (map #(populate-db :entities %) files)))
-    (time (doall (map #(populate-db :triples %) files)))
- ;;    (time (doall (map #(populate-db :spaces %) files)))
- ;;    (time (make-space-schemas))
-    (println "done with everything")))
+ ;; (time
+ ;;  (do
+ ;;    (time (doall (map #(populate-db :entities %) files)))
+ ;;    (time (doall (map #(populate-db :triples %) files)))
+ ;; ;;    (time (doall (map #(populate-db :spaces %) files)))
+ ;; ;;    (time (make-space-schemas))
+ ;;    (println "done with everything")))
 
 (def template-function-str
     "CREATE OR REPLACE FUNCTION \"type-$$ENTITY_ID$$\"(ent_id text)

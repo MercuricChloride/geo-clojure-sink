@@ -25,7 +25,9 @@ CREATE TABLE public.actions (
     number_value text,
     string_value text,
     entity_value text,
-    array_value text[]
+    array_value text[],
+    proposed_version_id text,
+    version_id text
 );
 
 
@@ -46,8 +48,7 @@ CREATE TABLE public.entities (
     -- defined_in text NOT NULL,
     defined_in text,
     value_type text,
-    version text,
-    versions text[]
+    version_id text
 );
 
 CREATE TABLE public.log_entries (
@@ -70,8 +71,7 @@ CREATE TABLE public.proposals (
     created_at integer NOT NULL,
     created_at_block integer NOT NULL,
     created_by text,
-    status text NOT NULL,
-    proposed_versions text[]
+    status text NOT NULL
 );
 
 
@@ -83,7 +83,7 @@ CREATE TABLE public.proposed_versions (
     created_at_block integer NOT NULL,
     created_by text NOT NULL,
     entity text NOT NULL,
-    actions text[]
+    proposal_id text
 );
 
 CREATE TABLE public.spaces (
@@ -129,7 +129,7 @@ CREATE TABLE public.versions (
     created_at_block integer NOT NULL,
     created_by text NOT NULL,
     proposed_version text NOT NULL,
-    actions text[]
+    entity_id text
 );
 
 ALTER TABLE ONLY public.accounts
@@ -137,7 +137,6 @@ ALTER TABLE ONLY public.accounts
 
 ALTER TABLE ONLY public.actions
     ADD CONSTRAINT actions_pkey PRIMARY KEY (id);
-
 ALTER TABLE ONLY public.cursors
     ADD CONSTRAINT cursors_pkey PRIMARY KEY (id);
 
@@ -167,6 +166,19 @@ ALTER TABLE ONLY public.triples
 
 ALTER TABLE ONLY public.versions
     ADD CONSTRAINT versions_pkey PRIMARY KEY (id);
+
+ALTER TABLE ONLY public.proposed_versions
+    ADD CONSTRAINT proposed_versions_proposal_fkey FOREIGN KEY (proposal_id) REFERENCES public.proposals(id);
+
+ALTER TABLE ONLY public.actions
+    ADD CONSTRAINT actions_proposed_version_in_actions_fkey FOREIGN KEY (proposed_version_id) REFERENCES public.proposed_versions(id);
+
+ALTER TABLE ONLY public.actions
+    ADD CONSTRAINT actions_version_in_actions_fkey FOREIGN KEY (version_id) REFERENCES public.versions(id);
+
+
+ALTER TABLE ONLY public.versions
+    ADD CONSTRAINT versions_to_entities_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
 
 ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entity_defined_in_spaces_address_fkey FOREIGN KEY (defined_in) REFERENCES public.spaces(address);

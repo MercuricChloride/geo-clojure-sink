@@ -21,7 +21,7 @@
   "Takes in an action and returns an entry in the triples table"
   [action]
   (let [entity-id (:entityId action) attribute-id (:attributeId action) value-key (value-type (:value action)) value-id (:id (:value action)) value (:value (:value action)) space (:space action)]
-    {:id (str entity-id "-" attribute-id "-" value-id)
+    {:id (str (java.util.UUID/randomUUID))
      :entity_id entity-id
      :attribute_id attribute-id
      value-key (if (= value-key :entity_value) value-id value)
