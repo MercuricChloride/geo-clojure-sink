@@ -52,21 +52,26 @@
 (def files (->> (io/file "./action_cache/")
                 file-seq
                 rest
-                       (take 100)
                 (map #(cstr/replace % #"./action_cache/" ""))
                 (map extract-file-meta)
                 sort-files
+
+                       (take 100)
 
                 (map #(json->actions "./action_cache/" (:filename %) (:space %) (:author %)))))
 
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
   [actions]
-  (-> (h/insert-into :public/entities)
+  (let [formatted-sql (-> (h/insert-into :public/entities)
       (h/values (into [] (map ->entity actions)))
       (h/on-conflict :id (h/do-nothing))
       (sql/format {:pretty true})
-      try-execute))
+      ;; try-execute
+      )]
+    (println "Generated SQL:" formatted-sql)
+    formatted-sql
+    ))
 
 
 (defn populate-triples
@@ -102,7 +107,7 @@
     (-> (h/insert-into :entity_attributes)
         (h/values (into [] (map ->entity-attribute filtered)))
         (h/on-conflict :id (h/do-nothing))
-        (sql/format {:pretty true})
+        (sql/format {:pretty true}),
         try-execute)))
 
 (defn populate-spaces [actions]
