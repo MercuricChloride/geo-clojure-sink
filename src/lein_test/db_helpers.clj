@@ -126,21 +126,49 @@
   )
 
 (jdbc/execute! ds (-> (h/insert-into :public/entities)
-    (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
                                            {:id (:id entity)
                                             :name (:name entity)
                                             :is_type true
                                             :defined_in ROOT-SPACE-ADDRESS})) ENTITIES)))
-    sql/format))
+                      sql/format))
 
 (jdbc/execute! ds (-> (h/insert-into :public/entities)
-    (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
                                            {:id (:id entity)
                                             :name (:name entity)
                                             :is_type true
                                             :defined_in ROOT-SPACE-ADDRESS
                                             :value_type (:id ((:value-type entity) ENTITIES))})) ATTRIBUTES)))
-    sql/format))
+                      sql/format))
+
+(jdbc/execute! ds (-> (h/insert-into :public/triples)
+                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                                           {:id (str (java.util.UUID/randomUUID))
+                                            :entity_id (:id entity)
+                                            :attribute_id (:id (:type ATTRIBUTES))
+                                            :value_id (:id (:schema-type ENTITIES))
+                                            :value_type "entity"
+                                            :entity_value (:id (:schema-type ENTITIES))
+                                            :defined_in ROOT-SPACE-ADDRESS
+                                            :is_protected true
+                                            :deleted false
+                                            })) ENTITIES)))
+                      sql/format))
+
+(jdbc/execute! ds (-> (h/insert-into :public/triples)
+                      (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                                           {:id (str (java.util.UUID/randomUUID))
+                                            :entity_id (:id entity)
+                                            :attribute_id (:id (:type ATTRIBUTES))
+                                            :value_id (:id (:attribute ENTITIES))
+                                            :value_type "entity"
+                                            :entity_value (:id (:attribute ENTITIES))
+                                            :defined_in ROOT-SPACE-ADDRESS
+                                            :is_protected true
+                                            :deleted false
+                                            })) ATTRIBUTES)))
+                      sql/format))
 
 (bootstrap-db)
 
