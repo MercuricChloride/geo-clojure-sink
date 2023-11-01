@@ -10,7 +10,7 @@
    [honey.sql.helpers :as h]
    [next.jdbc :as jdbc]
    [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
-   [lein-test.db-helpers :refer [nuke-db try-execute create-type-tables make-space-schemas]]))
+   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]))
 
 (defn -main
   "I don't do a whole lot ... yet."
@@ -132,12 +132,13 @@
 ;(h/add-index :idx-entity-attribute)
 ;(h/alter)
 
-;(nuke-db)
+(nuke-db)
+(bootstrap-db)
 
  (time
   (do
-    (time (doall (map #(populate-db :entities %) files)))
- ;;    (time (doall (map #(populate-db :triples %) files)))
+    ;(time (doall (map #(populate-db :entities %) files)))
+    ;(time (doall (map #(populate-db :triples %) (take 100 files))))
  ;;    (time (doall (map #(populate-db :spaces %) files)))
  ;;    (time (doall (map #(populate-db :types %) files)))
  ;;    (time (doall (map #(populate-db :attributes %) files)))

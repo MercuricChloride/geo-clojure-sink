@@ -2,7 +2,7 @@
   (:require [honey.sql :as sql]
             [clojure.string]
             [honey.sql.helpers :as h]
-            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
+            [lein-test.constants :refer [ATTRIBUTES ENTITIES ROOT-SPACE-ADDRESS]]
             [next.jdbc :as jdbc]
             [next.jdbc.connection :as connection]
             [dotenv :refer [env app-env]])
@@ -102,38 +102,10 @@
   (doseq [space (all-spaces)]
     (make-schema (:spaces/address space))))
 
-(defn- drop-table [table-name]
-  (sql/format [:raw (str "DROP TABLE " table-name " CASCADE")]))
-
-(defn- create-table [table-name columns]
-  (sql/format [:raw (str "CREATE TABLE " table-name " ("
-       (clojure.string/join ", "
-                            (map (fn [[name type]]
-                                   (str name " " type)) columns))
-       ");")]))
-
 (def get-schemas  (-> (h/select :schema-name)
                       (h/from :information_schema.schemata)
                       (h/where [:like :schema_name "0x%"])
                       (sql/format {:pretty true})))
-
-(defn create-tables []
-  (let [tables {"actions" [["id" "TEXT"], ["action_name" "VARCHAR(255)"]]
-                "entities" [["id" "TEXT"], ["entity_name" "VARCHAR(255)"]]
-                "triples" [["id" "TEXT"], ["triple_value" "VARCHAR(255)"]]
-                "spaces" [["id" "TEXT"], ["space_name" "VARCHAR(255)"]]}]
-    (doseq [[table-name columns] tables]
-      (let [stmt (create-table table-name columns)]
-        (jdbc/execute! ds stmt)))))
-
-;; (defn create-tables []
-;;   (doseq [stmt (concat (create-table "actions" [["name" "text"]])
-;;                        (create-table "entities" [])
-;;                        (create-table "triples" [])
-;;                        (create-table "spaces" []))]
-;;     (println stmt)  ; Print the statement
-;;     (jdbc/execute! ds stmt)))
-
 
 (defn nuke-schemas []
   (doseq [schema (try-execute get-schemas)]
@@ -148,5 +120,28 @@
 (defn bootstrap-db []
   (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/migrations/001_bootstrap.sql")])))
 
+(defn bootstrap-entities
+  []
 
-;; (nuke-db)
+  )
+
+(jdbc/execute! ds (-> (h/insert-into :public/entities)
+    (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                                           {:id (:id entity)
+                                            :name (:name entity)
+                                            :is_type true
+                                            :defined_in ROOT-SPACE-ADDRESS})) ENTITIES)))
+    sql/format))
+
+(jdbc/execute! ds (-> (h/insert-into :public/entities)
+    (h/values (into [] (map (fn [entity] (let [entity (second entity)]
+                                           {:id (:id entity)
+                                            :name (:name entity)
+                                            :is_type true
+                                            :defined_in ROOT-SPACE-ADDRESS
+                                            :value_type (:id ((:value-type entity) ENTITIES))})) ATTRIBUTES)))
+    sql/format))
+
+(bootstrap-db)
+
+;(nuke-db)
