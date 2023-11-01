@@ -242,15 +242,25 @@
     (populate-proposal proposal)
     (map populate-proposed-version+actions proposed-version+actions)))
 
-(populate-entry (first files))
+(defn- entry->author
+  [entry]
+  (->> entry
+     first
+     :author))
 
-;; (let [[proposal proposed-version+actions] (entry->proposal (first files))]
-;;   (doseq
-;;     (populate-proposal proposal)
-;;     (map #(populate-proposed-versions (first %)) proposed-version+actions)
-;;     (map #(populate-actions (second %)) proposed-version+actions)))
+(defn populate-accounts
+  [accounts]
+  (-> (h/insert-into :public/accounts)
+      (h/values (map (fn [account] {:id account}) accounts))
+      (sql/format)
+      try-execute))
 
-
+;; (->> files
+;;     (map entry->author)
+;;     (into #{})
+;;     (into [])
+;;     (filter #(not (nil? %)))
+;;     populate-accounts)
 
 (defn ipfs-fetch
   [cid]
