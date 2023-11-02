@@ -5,7 +5,7 @@
             [clojure.string :as cstr]
             [honey.sql :as sql]
             [honey.sql.helpers :as h]
-            [lein-test.constants :refer [ATTRIBUTES]]
+            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [bootstrap-db try-execute]]
             [lein-test.spec.action :as action]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
@@ -255,27 +255,47 @@
                    (sql/format {:pretty true}))))
 
 (defn populate-columns
-  "Takes actions as arguments, processes them to find the latest 'name', 'description' and 'value_type' attributes, 
-   and upserts into the entities table."
+  "Takes actions as arguments, processes them to find blessed columns to update and updates them."
   [actions]
   (let [name-attr-id (:id (:name ATTRIBUTES))
         description-attr-id (:id (:description ATTRIBUTES))
-        value-type-attr-id (:id (:value-type ATTRIBUTES))]
+        value-type-attr-id (:id (:value-type ATTRIBUTES))
+        type (:id (:type ATTRIBUTES))
+        attribute (:id (:attribute ENTITIES))
+        schema-type (:id (:schema-type ENTITIES))
+        ]
     (doseq [action actions]
-      (let [triple (->triple action)]
-        (when (and (= (:attribute_id triple) name-attr-id)
-                   (= (:value_type triple) "string")
-                   (:string_value triple))
+      (let [triple (->triple action)
+            is-name-update (and (= (:attribute_id triple) name-attr-id)
+                                (= (:value_type triple) "string")
+                                (:string_value triple))
+            is-description-update (and (= (:attribute_id triple) description-attr-id)
+                                      (= (:value_type triple) "string")
+                                      (:string_value triple))
+            is-value-type-update (and (= (:attribute_id triple) value-type-attr-id)
+                                      (= (:value_type triple) "entity")
+                                      (not (nil? (:value_id triple)))
+                                      (not (clojure.string/blank? (:value_id triple))))
+            is-type-flag-update (and (= (:attribute_id triple) type)
+                                (= (:value_id triple) schema-type))
+            is-attribute-flag-update (and (= (:attribute_id triple) type)
+                                (= (:value_id triple) attribute))
+            ]
+        
+        (when is-name-update
           (update-entity (:entity_id triple) :name (:string_value triple)))
-        (when (and (= (:attribute_id triple) description-attr-id)
-                   (= (:value_type triple) "string")
-                   (:string_value triple))
+        (when is-description-update
           (update-entity (:entity_id triple) :description (:string_value triple)))
-        (when (and (= (:attribute_id triple) value-type-attr-id)
-                   (= (:value_type triple) "entity")
-                   (not (nil? (:value_id triple)))
-                   (not (clojure.string/blank? (:value_id triple))))
-          (update-entity (:entity_id triple) :value_type_id (:value_id triple)))))))
+        (when is-value-type-update
+          (update-entity (:entity_id triple) :value_type_id (:value_id triple)))
+        (when is-type-flag-update
+          (update-entity (:entity_id triple) :is_type true))
+        (when is-attribute-flag-update
+          (update-entity (:entity_id triple) :is_attribute true))
+      )
+    )))
+
+
 
 (defn populate-db [type log-entry]
   (cond (= type :entities) (populate-entities log-entry)
