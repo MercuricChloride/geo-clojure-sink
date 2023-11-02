@@ -205,7 +205,7 @@
                    (h/where [:= :id entityId])
                    (sql/format {:pretty true}))))
 
-(defn populate-columns+fns
+(defn populate-columns
   "Takes actions as arguments, processes them to find blessed columns to update and updates them."
   [actions]
   (let [name-attr-id (:id (:name ATTRIBUTES))
@@ -245,6 +245,37 @@
     )))
 
 
+(defn populate-functions
+  "Takes actions as arguments, processes them to find blessed columns to update and updates them."
+  [actions]
+  (let [name-attr-id (:id (:name ATTRIBUTES))
+        description-attr-id (:id (:description ATTRIBUTES))
+        value-type-attr-id (:id (:value-type ATTRIBUTES))
+        type (:id (:type ATTRIBUTES))
+        attribute (:id (:attribute ENTITIES))
+        schema-type (:id (:schema-type ENTITIES))]
+    (doseq [action actions]
+      (let [triple (->triple action)
+            is-name-update (and (= (:attribute_id triple) name-attr-id)
+                                (= (:value_type triple) "string")
+                                (:string_value triple))
+            is-value-type-update (and (= (:attribute_id triple) value-type-attr-id)
+                                      (= (:value_type triple) "entity"))
+            is-type-flag-update (and (= (:attribute_id triple) type)
+                                     (= (:value_id triple) schema-type))
+            is-attribute-flag-update (and (= (:attribute_id triple) type)
+                                          (= (:value_id triple) attribute))]
+
+        (when is-name-update
+          (update-entity (:entity_id triple) :name (:string_value triple)))
+        (when is-value-type-update
+          (update-entity (:entity_id triple) :value_type_id (:value_id triple)))
+        (when is-type-flag-update
+          (update-entity (:entity_id triple) :is_type (boolean (:value_id triple))))
+        (when is-attribute-flag-update
+          (update-entity (:entity_id triple) :is_attribute (boolean (:value_id triple))))))))
+
+
 
 (defn populate-db [type log-entry]
   (cond (= type :entities) (populate-entities log-entry)
@@ -252,7 +283,8 @@
         (= type :accounts) (populate-account log-entry)
         (= type :spaces) (populate-spaces log-entry)
         (= type :proposals) (populate-proposals-from-entry log-entry)
-        (= type :columns) (populate-columns+fns log-entry)
+        (= type :columns) (populate-columns log-entry)
+        (= type :functions) (populate-functions log-entry)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
 (defn -main

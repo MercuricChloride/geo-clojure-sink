@@ -49,6 +49,7 @@ CREATE TABLE public.entities (
     defined_in text,
     value_type_id text,
     version_id text
+    updated_at_block integer,
 );
 
 CREATE TABLE public.log_entries (

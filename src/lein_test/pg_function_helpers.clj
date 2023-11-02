@@ -1,5 +1,6 @@
 (ns lein-test.pg-function-helpers 
-  (:require [honey.sql :as sql]
+  (:require [clojure.string :as s]
+            [honey.sql :as sql]
             [lein-test.constants :refer [ATTRIBUTES]]
             [lein-test.db-helpers :refer [try-execute]]))
 
@@ -153,15 +154,70 @@
     END;
     $$ LANGUAGE plpgsql STRICT STABLE;"))
 
+(defn fn-parsed-attribute-values
+  "The values for attributes but converted into their appropriate value type."
+  []
+"
+CREATE type primitive_value {
+  value {
+    id: text;
+    type: text;
+    value: text;
+  }
+};
+
+CREATE type entity_value {
+  value {
+    id: text;
+    type: 'entity';
+    entityValue: public.entities;
+  }
+};
+
+CREATE type unknown_value {
+  value {
+    id: text;
+    type: text;
+    value: text;
+    entityValue: public.entities;
+  }
+}; 
+ ")
+
+(defn fn-factory-attributes
+  [attribute-name attribute-ids]
+  (let [attribute-name (-> attribute-name
+                           s/lower-case
+                           (s/replace " " "_")
+                           (s/replace #"[^a-z_]" ""))
+        attribute-ids (map str attribute-ids)]
+    (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
+          RETURNS SETOF EntityAttribute AS $$
+          BEGIN
+            RETURN QUERY
+            SELECT 'entity' AS type, e AS value
+            FROM entities e
+            WHERE e.id IN (
+                SELECT t.value_id
+                FROM triples t
+                WHERE t.entity_id = e_row.id
+                AND t.attribute_id IN (" (s/join ", " attribute-ids) ")
+            );
+          END;
+          $$ LANGUAGE plpgsql STRICT STABLE;")))
+
+
+(defn try-execute-raw-sql [sql-fn]
+  (try-execute (sql/format [:raw (sql-fn)])))
 
 (defn execute-base-pg-fns
-  "Executes our functions for Postgraphile to pickup"
+  "Prepares some type and schema GraphQL queries for Postgraphile"
   []
-  (try-execute (sql/format [:raw (fn-entities-types)]))
-  (try-execute (sql/format [:raw (fn-entities-type-count)]))
-  (try-execute (sql/format [:raw (fn-entities-attributes)]))
-  (try-execute (sql/format [:raw (fn-entities-attribute-count)]))
-  (try-execute (sql/format [:raw (fn-entities-schema)]))
+  (try-execute-raw-sql fn-entities-types)
+  (try-execute-raw-sql fn-entities-type-count)
+  (try-execute-raw-sql fn-entities-attributes)
+  (try-execute-raw-sql fn-entities-attribute-count)
+  (try-execute-raw-sql fn-entities-schema)
   )
 
 
