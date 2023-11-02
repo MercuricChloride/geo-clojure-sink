@@ -13,10 +13,6 @@
    [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
    [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]))
 
-(defn -main
-  "I don't do a whole lot ... yet."
-  [& args]
-  (println "Hello, World!"))
 
 (defn- validate-actions
   ([actions]
@@ -90,27 +86,13 @@
       try-execute))
 
 (defn populate-spaces [actions]
-  (let [filtered (into [] (filter #(= (:attributeId %) "space") actions))]
-    (-> (h/insert-into :spaces)
-        (h/values (into [] (map ->spaces filtered)))
-        (h/on-conflict :id (h/do-nothing))
-        (sql/format {:pretty true})
-        try-execute)))
-
-(defn populate-db [type actions]
-  (cond (= type :entities) (populate-entities actions)
-        (= type :triples) (populate-triples actions)
-        ;(= type :actions) (populate-actions actions)
-        (= type :spaces) (populate-spaces actions)
-        :else (throw (ex-info "Invalid type" {:type type}))))
-
- ;; (time
- ;;  (do
- ;;    (time (doall (map #(populate-db :entities %) files)))
- ;;    (time (doall (map #(populate-db :triples %) files)))
- ;; ;;    (time (doall (map #(populate-db :spaces %) files)))
- ;; ;;    (time (make-space-schemas))
- ;;    (println "done with everything")))
+  (let [filtered (filter #(= (:attributeId %) "space") actions)]
+    (when (< 0 (count filtered))
+        (-> (h/insert-into :spaces)
+            (h/values (into [] (map ->spaces filtered)))
+            (h/on-conflict :id (h/do-nothing))
+            (sql/format {:pretty true})
+            try-execute))))
 
 (def template-function-str
     "CREATE OR REPLACE FUNCTION \"type-$$ENTITY_ID$$\"(ent_id text)
@@ -167,10 +149,6 @@
   [entry entity-id]
   (filter #(= (:entityId %) entity-id) entry))
 
-;; (try-execute (sql/format [:raw all-type-function]))
-;; (try-execute (sql/format [:raw all-attribute-function]))
-;; (try-execute (sql/format [:raw (type-function "type" "types")]))
-
 (defn ->proposed-version+actions
   [action-map created-at-block timestamp author proposal-id]
   (let [proposed-version-id (str (java.util.UUID/randomUUID))]
@@ -201,17 +179,19 @@
 
 (defn populate-proposal
   [proposal]
-  (try-execute (-> (h/insert-into :public/proposals)
+  (-> (h/insert-into :public/proposals)
       (h/values [proposal])
       (h/on-conflict :id (h/do-nothing))
-      (sql/format))))
+      (sql/format)
+      try-execute))
 
 (defn populate-proposed-version
   [proposed-version]
-  (try-execute (-> (h/insert-into :public/proposed-versions)
+  (-> (h/insert-into :public/proposed-versions)
       (h/values [proposed-version])
       (h/on-conflict :id (h/do-nothing))
-      (sql/format))))
+      (sql/format)
+      try-execute))
 
 (defn entry->proposal
   [log-entry]
@@ -224,10 +204,6 @@
         action-map (map #(entry->actions log-entry %) entity-ids)
         proposal (new-proposal block-number block-number author proposal-id space)
         proposed-versions+actions (map #(->proposed-version+actions % block-number block-number author proposal-id) action-map)]
-    ; insert proposal into proposals table pointing
-        ; insert proposed-versions into proposed-versions table pointing to ^
-            ; insert actions into actions table pointing to ^
-
     [proposal proposed-versions+actions]))
 
 (defn- populate-proposed-version+actions
@@ -236,11 +212,11 @@
     (populate-proposed-version proposed-version)
     (populate-actions actions)))
 
-(defn populate-entry
+(defn populate-proposals-from-entry
   [log-entry]
   (let [[proposal proposed-version+actions] (entry->proposal log-entry)]
     (populate-proposal proposal)
-    (map populate-proposed-version+actions proposed-version+actions)))
+            (map populate-proposed-version+actions proposed-version+actions)))
 
 (defn- entry->author
   [entry]
@@ -248,12 +224,15 @@
      first
      :author))
 
-(defn populate-accounts
-  [accounts]
-  (-> (h/insert-into :public/accounts)
-      (h/values (map (fn [account] {:id account}) accounts))
-      (sql/format)
-      try-execute))
+(defn populate-account
+  [log-entry]
+  (let [account (entry->author log-entry)]
+    (when (not (nil? account))
+      (-> (h/insert-into :public/accounts)
+          (h/values [{:id account}])
+          (h/on-conflict :id (h/do-nothing))
+          (sql/format)
+          try-execute))))
 
 ;; (->> files
 ;;     (map entry->author)
@@ -267,3 +246,24 @@
   (slurp (str "https://ipfs.network.thegraph.com/api/v0/cat?arg=" cid)))
 
 ;(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))
+
+(defn populate-db [type log-entry]
+  (cond (= type :entities) (populate-entities log-entry)
+        (= type :triples) (populate-triples log-entry)
+        (= type :accounts) (populate-account log-entry)
+        (= type :spaces) (populate-spaces log-entry)
+        (= type :proposals) (populate-proposals-from-entry log-entry)
+        :else (throw (ex-info "Invalid type" {:type type}))))
+
+(defn -main
+  "I DO SOMETHING NOW!"
+  [& args]
+ (time
+  (do
+    ;(time (bootstrap-db))
+    ;(time (doall (map #(populate-db :entities %) files)))
+    ;(time (doall (map #(populate-db :triples %) files)))
+    ;(time (doall (map #(populate-db :spaces %) files)))
+    ;(time (doall (map #(populate-db :accounts %) files)))
+    (time (doall (map #(populate-db :proposals %) files)))
+    (println "done with everything"))))
