@@ -262,7 +262,7 @@
   (do
     ;; (time (bootstrap-db))
     ;; (time (doall (map #(populate-db :entities %) files)))
-    (time (doall (map #(populate-db :triples %) files)))
+    ;; (time (doall (map #(populate-db :triples %) files)))
     ;; (time (doall (map #(populate-db :spaces %) files)))
     ;; (time (doall (map #(populate-db :accounts %) files)))
     ;; (time (doall (map #(populate-db :columns %) files)))

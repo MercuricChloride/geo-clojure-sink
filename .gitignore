@@ -16,3 +16,4 @@ action_cache/
 .lsp/
 .DS_Store
 .env
+.calva
