@@ -45,9 +45,9 @@ CREATE TABLE public.entities (
     name character varying,
     description character varying,
     is_type boolean DEFAULT false,
-    -- defined_in text NOT NULL,
+    is_attribute boolean DEFAULT false,
     defined_in text,
-    value_type text,
+    value_type_id text,
     version_id text
 );
 
@@ -177,9 +177,6 @@ ALTER TABLE ONLY public.actions
     ADD CONSTRAINT actions_version_in_actions_fkey FOREIGN KEY (version_id) REFERENCES public.versions(id);
 
 
-ALTER TABLE ONLY public.versions
-    ADD CONSTRAINT versions_to_entities_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
-
 ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entity_defined_in_spaces_address_fkey FOREIGN KEY (defined_in) REFERENCES public.spaces(address);
 
@@ -203,6 +200,9 @@ ALTER TABLE ONLY public.triples
 
 ALTER TABLE ONLY public.triples
     ADD CONSTRAINT triples_entity_value_entity_id_fkey FOREIGN KEY (entity_value) REFERENCES public.entities(id);
+ALTER TABLE ONLY public.versions
+    ADD CONSTRAINT versions_to_entities_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
+
 
 
 -- Disable All Triggers so we can play fast and loose with foreign keys
@@ -215,3 +215,6 @@ ALTER TABLE public.proposed_versions DISABLE TRIGGER ALL;
 ALTER TABLE public.triples DISABLE TRIGGER ALL;
 ALTER TABLE public.subspaces DISABLE TRIGGER ALL;
 ALTER TABLE public.versions DISABLE TRIGGER ALL;
+
+CREATE INDEX idx_entity_attribute ON public.triples(entity_id, attribute_id);
+CREATE INDEX idx_entity_attribute_value_id ON public.triples(entity_id, attribute_id, value_id);
