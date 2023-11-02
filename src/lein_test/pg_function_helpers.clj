@@ -6,8 +6,6 @@
 (def type-id (str (:id (:type ATTRIBUTES))))
 (def attribute-id (str (:id (:attribute ATTRIBUTES))))
 
-(println "type-id: " type-id)
-
 (defn fn-entities-types
   "Used to get all of the types of an entity.
    
@@ -117,8 +115,6 @@
         RETURN attribute_count;
     END;
     $$ LANGUAGE plpgsql STRICT STABLE;"))
-
-
 
 
 (defn fn-entities-schema

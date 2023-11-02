@@ -7,7 +7,7 @@
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [try-execute]]
-            [lein-test.pg-function-helpers :refer [execuate-psql-fns]]
+            [lein-test.pg-function-helpers :refer [execute-base-pg-fns]]
             [lein-test.spec.action :as action]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
@@ -267,5 +267,5 @@
     ;; (time (doall (map #(populate-db :accounts %) files)))
     ;; (time (doall (map #(populate-db :columns %) files)))
     ;; (time (doall (map #(populate-db :proposals %) files)))
-    (execuate-psql-fns)
+    (execute-base-pg-fns)
     (println "done with everything"))))
