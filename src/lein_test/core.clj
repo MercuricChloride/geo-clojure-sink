@@ -6,7 +6,7 @@
             [honey.sql :as sql]
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES]]
-            [lein-test.db-helpers :refer [try-execute]]
+            [lein-test.db-helpers :refer [bootstrap-db try-execute]]
             [lein-test.spec.action :as action]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
@@ -255,16 +255,27 @@
                    (sql/format {:pretty true}))))
 
 (defn populate-columns
-  "Takes actions as arguments, processes them to find the latest 'name' attribute, 
+  "Takes actions as arguments, processes them to find the latest 'name', 'description' and 'value_type' attributes, 
    and upserts into the entities table."
   [actions]
-  (let [name-attr-id (:id (:name ATTRIBUTES))]
+  (let [name-attr-id (:id (:name ATTRIBUTES))
+        description-attr-id (:id (:description ATTRIBUTES))
+        value-type-attr-id (:id (:value-type ATTRIBUTES))]
     (doseq [action actions]
       (let [triple (->triple action)]
         (when (and (= (:attribute_id triple) name-attr-id)
                    (= (:value_type triple) "string")
                    (:string_value triple))
-          (update-entity (:entity_id triple) :name (:string_value triple)))))))
+          (update-entity (:entity_id triple) :name (:string_value triple)))
+        (when (and (= (:attribute_id triple) description-attr-id)
+                   (= (:value_type triple) "string")
+                   (:string_value triple))
+          (update-entity (:entity_id triple) :description (:string_value triple)))
+        (when (and (= (:attribute_id triple) value-type-attr-id)
+                   (= (:value_type triple) "entity")
+                   (not (nil? (:value_id triple)))
+                   (not (clojure.string/blank? (:value_id triple))))
+          (update-entity (:entity_id triple) :value_type_id (:value_id triple)))))))
 
 (defn populate-db [type log-entry]
   (cond (= type :entities) (populate-entities log-entry)
@@ -280,8 +291,8 @@
   [& args]
  (time
   (do
-    ;(time (bootstrap-db))
-    ;(time (doall (map #(populate-db :entities %) files)))
+    (time (bootstrap-db))
+    (time (doall (map #(populate-db :entities %) files)))
     ;(time (doall (map #(populate-db :triples %) files)))
     ;(time (doall (map #(populate-db :spaces %) files)))
     ;; (time (doall (map #(populate-db :accounts %) files)))
