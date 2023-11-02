@@ -1,17 +1,14 @@
 (ns lein-test.core
   (:gen-class)
-  (:require
-
-   [cheshire.core :as ch]
-   [lein-test.constants :refer [ENTITIES]]
-   [clojure.string :as cstr]
-   [clojure.java.io :as io]
-   [lein-test.spec.action :as action]
-   [honey.sql :as sql]
-   [honey.sql.helpers :as h]
-   [next.jdbc :as jdbc]
-   [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
-   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]))
+  (:require [cheshire.core :as ch]
+            [clojure.java.io :as io]
+            [clojure.string :as cstr]
+            [honey.sql :as sql]
+            [honey.sql.helpers :as h]
+            [lein-test.constants :refer [ATTRIBUTES]]
+            [lein-test.db-helpers :refer [try-execute]]
+            [lein-test.spec.action :as action]
+            [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
 
 (defn- validate-actions
@@ -247,12 +244,35 @@
 
 ;(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))
 
+
+
+(defn update-entity
+  "Updates a specific entity in the table."
+  [entityId column value]
+  (try-execute (-> (h/update :public/entities)
+                   (h/set {column value})
+                   (h/where [:= :id entityId])
+                   (sql/format {:pretty true}))))
+
+(defn populate-columns
+  "Takes actions as arguments, processes them to find the latest 'name' attribute, 
+   and upserts into the entities table."
+  [actions]
+  (let [name-attr-id (:id (:name ATTRIBUTES))]
+    (doseq [action actions]
+      (let [triple (->triple action)]
+        (when (and (= (:attribute_id triple) name-attr-id)
+                   (= (:value_type triple) "string")
+                   (:string_value triple))
+          (update-entity (:entity_id triple) :name (:string_value triple)))))))
+
 (defn populate-db [type log-entry]
   (cond (= type :entities) (populate-entities log-entry)
         (= type :triples) (populate-triples log-entry)
         (= type :accounts) (populate-account log-entry)
         (= type :spaces) (populate-spaces log-entry)
         (= type :proposals) (populate-proposals-from-entry log-entry)
+        (= type :columns) (populate-columns log-entry)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
 (defn -main
@@ -264,6 +284,7 @@
     ;(time (doall (map #(populate-db :entities %) files)))
     ;(time (doall (map #(populate-db :triples %) files)))
     ;(time (doall (map #(populate-db :spaces %) files)))
-    ;(time (doall (map #(populate-db :accounts %) files)))
-    (time (doall (map #(populate-db :proposals %) files)))
+    ;; (time (doall (map #(populate-db :accounts %) files)))
+    (time (doall (map #(populate-db :columns %) files)))
+    ;; (time (doall (map #(populate-db :proposals %) files)))
     (println "done with everything"))))
