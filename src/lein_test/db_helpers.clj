@@ -1,11 +1,12 @@
 (ns lein-test.db-helpers
-  (:require [honey.sql :as sql]
-            [clojure.string]
+  (:require [clojure.string]
+            [dotenv :refer [env]]
+            [honey.sql :as sql]
             [honey.sql.helpers :as h]
-            [lein-test.constants :refer [ATTRIBUTES ENTITIES ROOT-SPACE-ADDRESS]]
+            [lein-test.constants :refer [ATTRIBUTES ENTITIES
+                                         ROOT-SPACE-ADDRESS]]
             [next.jdbc :as jdbc]
-            [next.jdbc.connection :as connection]
-            [dotenv :refer [env app-env]])
+            [next.jdbc.connection :as connection])
   (:import (com.zaxxer.hikari HikariDataSource)))
 
 (def ds (connection/->pool HikariDataSource
@@ -68,6 +69,13 @@
                    (h/where :and [:= :attribute_id (:id (:name ATTRIBUTES))] [:= :value_type "string"])
                    (sql/format))))
 
+(defn get-entity-name
+  "Returns the name of the entity for a given entity-id"
+  [entity-id]
+  (try-execute (-> (h/select [:name])
+                   (h/from :entities)
+                   (h/where [:= :id entity-id])
+                   (sql/format))))
 ;(time (all-names))
 
 (defn upsert-names

@@ -154,7 +154,7 @@
     $$ LANGUAGE plpgsql STRICT STABLE;"))
 
 
-(defn execuate-psql-fns
+(defn execute-base-pg-fns
   "Executes our functions for Postgraphile to pickup"
   []
   (try-execute (sql/format [:raw (fn-entities-types)]))
