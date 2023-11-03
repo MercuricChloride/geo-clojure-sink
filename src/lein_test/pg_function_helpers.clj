@@ -170,18 +170,21 @@
   "The values for attributes but converted into their appropriate value type."
   []
   "
+  DROP TYPE IF EXISTS attribute_with_scalar_value_type CASCADE;
 CREATE TYPE attribute_with_scalar_value_type AS (
     id text,
     type text,
     value text
 );
 
+   DROP TYPE IF EXISTS attribute_with_relation_value_type CASCADE;
 CREATE TYPE attribute_with_relation_value_type AS (
     id text,
     type text, 
     entityValue public.entities 
 );
 
+   DROP TYPE IF EXISTS attribute_with_no_value_type CASCADE;
 CREATE TYPE attribute_with_no_value_type AS (
     id text,
     type text,
@@ -244,7 +247,7 @@ CREATE TYPE attribute_with_no_value_type AS (
         DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
                                                            
         CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
-               RETURNS SETOF attribute_with_scalar_value_type AS $$
+               RETURNS SETOF attribute_with_no_value_type AS $$
                BEGIN
                  RETURN QUERY
                  SELECT t.value_type AS type, t.string_value AS value
@@ -311,7 +314,7 @@ END $$;
   (try-execute-raw-sql (fn-entities-attributes))
   (try-execute-raw-sql (fn-entities-attribute-count))
   (try-execute-raw-sql (fn-entities-schema))
-  ;; (try-execute-raw-sql (fn-parsed-attribute-values))
+  (try-execute-raw-sql (fn-parsed-attribute-values))
   (let [attribute-entities (get-all-attribute-entities)]
     (doseq [entity attribute-entities]
       (when (parse-pg-fn-name (:entities/name entity))
