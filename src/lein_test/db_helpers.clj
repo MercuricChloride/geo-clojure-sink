@@ -61,13 +61,23 @@
                 (h/from :spaces)
                 (sql/format {:pretty true}))))
 
-(defn- all-names
-  "Returns a seq of all names for entities"
+
+
+(defn get-all-schema-type-entities
+  "Gets all rows from :public/entities where is_type is true"
   []
-  (try-execute (-> (h/select-distinct-on [:entity_id] :entity_id :string_value)
-                   (h/from :triples)
-                   (h/where :and [:= :attribute_id (:id (:name ATTRIBUTES))] [:= :value_type "string"])
-                   (sql/format))))
+  (try-execute (-> (h/select [:*])
+                   (h/from :public/entities)
+                   (h/where [:= :is_type true])
+                   (sql/format {:pretty true}))))
+
+(defn get-all-attribute-entities  
+  "Gets all rows from :public/entities where is_attribute is true"
+  []
+  (try-execute (-> (h/select [:*])
+                   (h/from :public/entities)
+                   (h/where [:= :is_attribute true])
+                   (sql/format {:pretty true}))))
 
 (defn get-entity-name
   "Returns the name of the entity for a given entity-id"

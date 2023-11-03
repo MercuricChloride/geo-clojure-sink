@@ -1,8 +1,9 @@
-(ns lein-test.pg-function-helpers 
+(ns lein-test.pg-function-helpers
   (:require [clojure.string :as s]
             [honey.sql :as sql]
             [lein-test.constants :refer [ATTRIBUTES]]
-            [lein-test.db-helpers :refer [try-execute]]))
+            [lein-test.db-helpers :refer [get-all-attribute-entities
+                                          try-execute]]))
 
 (def type-id (str (:id (:type ATTRIBUTES))))
 (def attribute-id (str (:id (:attribute ATTRIBUTES))))
@@ -21,7 +22,7 @@
       }
   }"
   []
-    (str "CREATE OR REPLACE FUNCTION entities_types(e_row entities)
+  (str "CREATE OR REPLACE FUNCTION entities_types(e_row entities)
     RETURNS SETOF entities AS $$
     BEGIN
         RETURN QUERY
@@ -77,7 +78,7 @@
       }
   }"
   []
-    (str "CREATE OR REPLACE FUNCTION entities_attributes(e_row entities)
+  (str "CREATE OR REPLACE FUNCTION entities_attributes(e_row entities)
     RETURNS SETOF entities AS $$
     BEGIN
       RETURN QUERY
@@ -157,7 +158,7 @@
 (defn fn-parsed-attribute-values
   "The values for attributes but converted into their appropriate value type."
   []
-"
+  "
 CREATE type primitive_value {
   value {
     id: text;
@@ -184,13 +185,23 @@ CREATE type unknown_value {
 }; 
  ")
 
-(defn fn-factory-attributes
-  [attribute-name attribute-ids]
-  (let [attribute-name (-> attribute-name
-                           s/lower-case
-                           (s/replace " " "_")
-                           (s/replace #"[^a-z_]" ""))
-        attribute-ids (map str attribute-ids)]
+(defn parse-pg-fn-name [type-name]
+  (if (not (= (type type-name) java.lang.String))
+    (println "Invalid type name" type-name)
+    (-> (str type-name)
+        s/lower-case
+        (s/replace " " "_")
+        (s/replace #"[^a-z_]" ""))))
+
+
+(defn entity->attribute-fn
+  [entity]
+
+  (let [attribute-name (parse-pg-fn-name (:entities/name entity))
+        value-type (:entities/value_type entity)
+        attribute-ids (map str [(:entities/id entity)])]
+
+
     (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
           RETURNS SETOF EntityAttribute AS $$
           BEGIN
@@ -207,18 +218,24 @@ CREATE type unknown_value {
           $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 
-(defn try-execute-raw-sql [sql-fn]
-  (try-execute (sql/format [:raw (sql-fn)])))
+(defn try-execute-raw-sql [raw-sql]
+  (try-execute (sql/format [:raw raw-sql])))
 
-(defn execute-base-pg-fns
+
+(defn drop-all-pg-functions
+  []
+  "DROP FUNCTION IF EXISTS pg_catalog.pg_function CASCADE")
+
+(defn populate-pg-functions
   "Prepares some type and schema GraphQL queries for Postgraphile"
   []
-  (try-execute-raw-sql fn-entities-types)
-  (try-execute-raw-sql fn-entities-type-count)
-  (try-execute-raw-sql fn-entities-attributes)
-  (try-execute-raw-sql fn-entities-attribute-count)
-  (try-execute-raw-sql fn-entities-schema)
-  )
-
-
-
+  (try-execute-raw-sql (drop-all-pg-functions))
+  (try-execute-raw-sql (fn-entities-types))
+  (try-execute-raw-sql (fn-entities-type-count))
+  (try-execute-raw-sql (fn-entities-attributes))
+  (try-execute-raw-sql (fn-entities-attribute-count))
+  (try-execute-raw-sql (fn-entities-schema))
+  (let [attribute-entities (get-all-attribute-entities)]
+    (doseq [entity attribute-entities]
+      (when (parse-pg-fn-name (:entities/name entity))
+        (try-execute-raw-sql (entity->attribute-fn entity))))))

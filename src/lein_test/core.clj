@@ -7,7 +7,7 @@
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [try-execute]]
-            [lein-test.pg-function-helpers :refer [execute-base-pg-fns]]
+            [lein-test.pg-function-helpers :refer [populate-pg-functions]]
             [lein-test.spec.action :as action]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
@@ -225,6 +225,7 @@
             action-type (:type action)
             is-delete-triple (= action-type "deleteTriple")]
 
+        ;; TODO: Add Space and Account Updates
         (when is-name-update
           (update-entity (:entity_id triple) :name (if is-delete-triple nil (:string_value triple))))
         (when is-description-update
@@ -236,45 +237,6 @@
         (when is-attribute-flag-update
           (update-entity (:entity_id triple) :is_attribute (if is-delete-triple nil (boolean (:value_id triple)))))))))
 
-
-
-(defn populate-functions
-  "Takes actions as arguments, processes them to find blessed columns to update and updates them."
-  [actions]
-  (let [name-attr-id (:id (:name ATTRIBUTES))
-        description-attr-id (:id (:description ATTRIBUTES))
-        value-type-attr-id (:id (:value-type ATTRIBUTES))
-        type (:id (:type ATTRIBUTES))
-        attribute (:id (:attribute ENTITIES))
-        schema-type (:id (:schema-type ENTITIES))]
-    (doseq [action actions]
-      (let [triple (->triple action)
-            is-name-update (and (= (:attribute_id triple) name-attr-id)
-                                (= (:value_type triple) "string")
-                                (:string_value triple))
-            is-description-update (and (= (:attribute_id triple) description-attr-id)
-                                       (= (:value_type triple) "string")
-                                       (:string_value triple))
-            is-value-type-update (and (= (:attribute_id triple) value-type-attr-id)
-                                      (= (:value_type triple) "entity"))
-            is-type-flag-update (and (= (:attribute_id triple) type)
-                                     (= (:value_id triple) schema-type))
-            is-attribute-flag-update (and (= (:attribute_id triple) type)
-                                          (= (:value_id triple) attribute))]
-
-        (when is-name-update
-          (update-entity (:entity_id triple) :name (:string_value triple)))
-        (when is-description-update
-          (update-entity (:entity_id triple) :description (:string_value triple)))
-        (when is-value-type-update
-          (update-entity (:entity_id triple) :value_type_id (:value_id triple)))
-        (when is-type-flag-update
-          (update-entity (:entity_id triple) :is_type (boolean (:value_id triple))))
-        (when is-attribute-flag-update
-          (update-entity (:entity_id triple) :is_attribute (boolean (:value_id triple))))))))
-
-
-
 (defn populate-db [type log-entry]
   (cond (= type :entities) (populate-entities log-entry)
         (= type :triples) (populate-triples log-entry)
@@ -282,7 +244,6 @@
         (= type :spaces) (populate-spaces log-entry)
         (= type :proposals) (populate-proposals-from-entry log-entry)
         (= type :columns) (populate-columns log-entry)
-        (= type :functions) (populate-functions log-entry)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
 (defn -main
@@ -297,5 +258,5 @@
     ;; (time (doall (map #(populate-db :accounts %) files)))
     ;; (time (doall (map #(populate-db :columns %) files)))
     ;; (time (doall (map #(populate-db :proposals %) files)))
-     (execute-base-pg-fns)
+     (populate-pg-functions)
      (println "done with everything"))))
