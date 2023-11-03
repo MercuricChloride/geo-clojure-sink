@@ -11,12 +11,12 @@
 
 (defn take-all [ch f]
   (async/go (loop []
-        (let [val (async/<! ch)]
-          (if val
-            (do
-              (f val)
-              (recur))
-            (println "Channel closed"))))))
+              (let [val (async/<! ch)]
+                  (if val
+                    (do
+                      (f val)
+                      (recur))
+                    (println "Channel closed"))))))
 
 (defn slurp-bytes
   "Slurp the bytes from a slurpable thing"
@@ -34,14 +34,17 @@
         map-output (:map-output output)
         map-value (:value map-output)]
     (try
-      (let [entries-added (geo/pb->EntriesAdded map-value)]
-        (when (not (= 0 (count (:entries entries-added))))
-          (async/put! channel entries-added)))
-      (catch Exception e
+      (let [geo-output (geo/pb->GeoOutput map-value)]
+        (when (not (and 
+                    (empty? (:entries geo-output)) 
+                    (empty? (:roles-granted geo-output)) 
+                    (empty? (:roles-granted geo-output))))
+              (async/put! channel geo-output)))
+      (catch Exception e))))
         ;; (println "Error parsing map output:" e)
-        ))))
+        
 
-(def spkg (v1/pb->Package (slurp-bytes "substream.spkg")))
+(def spkg (v1/pb->Package (slurp-bytes "geo-substream-v1.0.2.spkg")))
 
 (def client @(grpc.http2/connect {:uri "https://polygon.substreams.pinax.network:443"
                                   :ssl true
@@ -50,9 +53,9 @@
 (let [channel (async/chan) output-channel (async/chan)]
   ; we start a thread to initiate the stream
   (async/thread (stream/Blocks client (rpc/new-Request {:start-block-num 36472424
-                                          :stop-block-num 36500000
-                                          :modules (:modules spkg)
-                                          :output-module "map_entries_added"}) channel))
+                                                        :stop-block-num 36472434
+                                                        :modules (:modules spkg)
+                                                        :output-module "geo_out"}) channel))
  ; we then start another thread to filter out the entries that have data
   (async/thread
     (take-all channel #(handle-block-scoped-data % output-channel)))
