@@ -47,7 +47,7 @@ CREATE TABLE public.entities (
     is_type boolean DEFAULT false,
     is_attribute boolean DEFAULT false,
     defined_in text,
-    value_type_id text,
+    attribute_value_type_id text,
     version_id text
     updated_at_block integer,
 );
@@ -182,7 +182,7 @@ ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entity_defined_in_spaces_address_fkey FOREIGN KEY (defined_in) REFERENCES public.spaces(address);
 
 ALTER TABLE ONLY public.entities
-    ADD CONSTRAINT entity_value_type_entity_id_fkey FOREIGN KEY (value_type_id) REFERENCES public.entities(id);
+    ADD CONSTRAINT entity_value_type_entity_id_fkey FOREIGN KEY (attribute_value_type_id) REFERENCES public.entities(id);
 
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_id_entity_id_fkey FOREIGN KEY (id) REFERENCES public.entities(id);

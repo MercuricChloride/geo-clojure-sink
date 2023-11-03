@@ -156,7 +156,7 @@
                                                                 :name (:name entity)
                                                                 :is_type true
                                                                 :defined_in ROOT-SPACE-ADDRESS
-                                                                :value_type (:id ((:value-type entity) ENTITIES))})) ATTRIBUTES)))
+                                                                :attribute_value_type_id (:id ((:value-type entity) ENTITIES))})) ATTRIBUTES)))
                         sql/format))
 
   ;; creates the triples giving the entities a type of type

@@ -231,7 +231,7 @@
         (when is-description-update
           (update-entity (:entity_id triple) :description (if is-delete-triple nil (:string_value triple))))
         (when is-value-type-update
-          (update-entity (:entity_id triple) :value_type_id (if is-delete-triple nil (:value_id triple))))
+          (update-entity (:entity_id triple) :attribute_value_type_id (if is-delete-triple nil (:value_id triple))))
         (when is-type-flag-update
           (update-entity (:entity_id triple) :is_type (if is-delete-triple nil (boolean (:value_id triple)))))
         (when is-attribute-flag-update

@@ -1,7 +1,7 @@
 (ns lein-test.pg-function-helpers
   (:require [clojure.string :as s]
             [honey.sql :as sql]
-            [lein-test.constants :refer [ATTRIBUTES]]
+            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [get-all-attribute-entities
                                           try-execute]]))
 
@@ -155,35 +155,7 @@
     END;
     $$ LANGUAGE plpgsql STRICT STABLE;"))
 
-(defn fn-parsed-attribute-values
-  "The values for attributes but converted into their appropriate value type."
-  []
-  "
-CREATE type primitive_value {
-  value {
-    id: text;
-    type: text;
-    value: text;
-  }
-};
 
-CREATE type entity_value {
-  value {
-    id: text;
-    type: 'entity';
-    entityValue: public.entities;
-  }
-};
-
-CREATE type unknown_value {
-  value {
-    id: text;
-    type: text;
-    value: text;
-    entityValue: public.entities;
-  }
-}; 
- ")
 
 (defn parse-pg-fn-name [type-name]
   (if (not (= (type type-name) java.lang.String))
@@ -194,29 +166,110 @@ CREATE type unknown_value {
         (s/replace #"[^a-z_]" ""))))
 
 
-(defn entity->attribute-fn
-  [entity]
+(defn fn-parsed-attribute-values
+  "The values for attributes but converted into their appropriate value type."
+  []
+  "
+CREATE TYPE attribute_with_scalar_value_type AS (
+    id text,
+    type text,
+    value text
+);
 
+CREATE TYPE attribute_with_relation_value_type AS (
+    id text,
+    type text, 
+    entityValue public.entities 
+);
+
+CREATE TYPE attribute_with_no_value_type AS (
+    id text,
+    type text,
+    value text,
+    entityValue public.entities 
+);
+ ")
+
+
+(defn classify-attribute-value-type [id]
+  (cond
+    (nil? id) "unknown"
+    (= id (:id (:relation ENTITIES))) "relation"
+    :else "primitive"))
+    
+
+(defn entity->attribute-relation-fn
+  [attribute-name attribute-ids]
+  (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
+        RETURNS SETOF attribute_with_relation_value_type AS $$
+        BEGIN
+          RETURN QUERY
+          SELECT 'entity' AS type, e AS entityValue
+          FROM entities e
+          WHERE e.id IN (
+              SELECT t.value_id
+              FROM triples t
+              WHERE t.entity_id = e_row.id
+              AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) ")
+          );
+        END;
+        $$ LANGUAGE plpgsql STRICT STABLE;"))
+
+(defn entity->attribute-scalar-fn
+  [attribute-name attribute-ids]
+  (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
+        RETURNS SETOF attribute_with_scalar_value_type AS $$
+        BEGIN
+          RETURN QUERY
+          SELECT t.value_type AS type, t.string_value AS value
+          FROM triples t
+          WHERE t.entity_id = e_row.id
+          AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) ")
+          AND t.value_type IS NOT NULL;
+        END;
+        $$ LANGUAGE plpgsql STRICT STABLE;"))
+
+(defn entity->attribute-no-value-fn
+  [attribute-name attribute-ids]
+  (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
+               RETURNS SETOF attribute_with_scalar_value_type AS $$
+               BEGIN
+                 RETURN QUERY
+                 SELECT t.value_type AS type, t.string_value AS value
+                 FROM triples t
+                 WHERE t.entity_id = e_row.id
+                 AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) ")
+                 AND t.value_type IS NOT NULL
+                                                                                    
+                e AS entityValue
+                FROM entities e
+                WHERE e.id IN (
+                  SELECT t.value_id
+                  FROM triples t
+                  WHERE t.entity_id = e_row.id
+                  AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) "
+                )
+          );
+                                                                                    ;
+               END;
+               $$ LANGUAGE plpgsql STRICT STABLE;"))
+
+
+(defn entity->attribute-fn-wrapper
+  [entity]
   (let [attribute-name (parse-pg-fn-name (:entities/name entity))
-        value-type (:entities/value_type entity)
+        value-type (classify-attribute-value-type (:entities/value_type entity))
         attribute-ids (map str [(:entities/id entity)])]
 
+    (cond
+      (= value-type "relation")
+      (entity->attribute-relation-fn attribute-name attribute-ids)
 
-    (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
-          RETURNS SETOF EntityAttribute AS $$
-          BEGIN
-            RETURN QUERY
-            SELECT 'entity' AS type, e AS value
-            FROM entities e
-            WHERE e.id IN (
-                SELECT t.value_id
-                FROM triples t
-                WHERE t.entity_id = e_row.id
-                AND t.attribute_id IN (" (s/join ", " attribute-ids) ")
-            );
-          END;
-          $$ LANGUAGE plpgsql STRICT STABLE;")))
+      (nil? value-type)
+      (entity->attribute-no-value-fn attribute-name attribute-ids)
 
+      :else
+      (entity->attribute-scalar-fn attribute-name attribute-ids))))
 
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
@@ -235,7 +288,10 @@ CREATE type unknown_value {
   (try-execute-raw-sql (fn-entities-attributes))
   (try-execute-raw-sql (fn-entities-attribute-count))
   (try-execute-raw-sql (fn-entities-schema))
+  (try-execute-raw-sql (fn-parsed-attribute-values))
   (let [attribute-entities (get-all-attribute-entities)]
     (doseq [entity attribute-entities]
       (when (parse-pg-fn-name (:entities/name entity))
-        (try-execute-raw-sql (entity->attribute-fn entity))))))
+        (try-execute-raw-sql (entity->attribute-fn-wrapper entity))))))
+    
+  
