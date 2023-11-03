@@ -196,12 +196,12 @@ CREATE TYPE attribute_with_no_value_type AS (
     (nil? id) "unknown"
     (= id (:id (:relation ENTITIES))) "relation"
     :else "primitive"))
-    
+
 
 (defn entity->attribute-relation-fn
   [attribute-name attribute-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
-  (str "
+    (str "
         DROP FUNCTION IF EXISTS entities_" attribute-name "(e_row entities);
         
         CREATE FUNCTION entities_" attribute-name "(e_row entities)
@@ -221,21 +221,28 @@ CREATE TYPE attribute_with_no_value_type AS (
 
 (defn entity->attribute-scalar-fn
   [attribute-name attribute-ids]
-  (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
+  (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
+    (str "
+        DROP FUNCTION IF EXISTS entities_" attribute-name "(e_row entities);
+                                                           
+        CREATE FUNCTION entities_" attribute-name "(e_row entities)
         RETURNS SETOF attribute_with_scalar_value_type AS $$
         BEGIN
           RETURN QUERY
           SELECT t.value_type AS type, t.string_value AS value
           FROM triples t
           WHERE t.entity_id = e_row.id
-          AND t.attribute_id IN ("' (clojure.string/join ", " attribute-ids) '")
+          AND t.attribute_id IN (" quoted-ids ")
           AND t.value_type IS NOT NULL;
         END;
-        $$ LANGUAGE plpgsql STRICT STABLE;"))
+        $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 (defn entity->attribute-no-value-fn
   [attribute-name attribute-ids]
-  (str "
+  (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
+    (str "
+        DROP FUNCTION IF EXISTS entities_" attribute-name "(e_row entities);
+                                                           
         CREATE FUNCTION entities_" attribute-name "(e_row entities)
                RETURNS SETOF attribute_with_scalar_value_type AS $$
                BEGIN
@@ -243,7 +250,7 @@ CREATE TYPE attribute_with_no_value_type AS (
                  SELECT t.value_type AS type, t.string_value AS value
                  FROM triples t
                  WHERE t.entity_id = e_row.id
-                 AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) ")
+                 AND t.attribute_id IN (" quoted-ids ")
                  AND t.value_type IS NOT NULL
                                                                                     
                 e AS entityValue
@@ -252,12 +259,12 @@ CREATE TYPE attribute_with_no_value_type AS (
                   SELECT t.value_id
                   FROM triples t
                   WHERE t.entity_id = e_row.id
-                  AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) "
+                  AND t.attribute_id IN (" quoted-ids "
                 )
           );
                                                                                     ;
                END;
-               $$ LANGUAGE plpgsql STRICT STABLE;"))
+               $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 
 (defn entity->attribute-fn-wrapper
@@ -271,14 +278,11 @@ CREATE TYPE attribute_with_no_value_type AS (
       (entity->attribute-relation-fn attribute-name attribute-ids)
 
       (nil? value-type)
-      ;; (entity->attribute-no-value-fn attribute-name attribute-ids)
-      (entity->attribute-relation-fn attribute-name attribute-ids)
+      (entity->attribute-no-value-fn attribute-name attribute-ids)
 
 
       :else
-      ;; (entity->attribute-relation-fn attribute-name attribute-ids)
-      (entity->attribute-relation-fn attribute-name attribute-ids)))
-  )
+      (entity->attribute-relation-fn attribute-name attribute-ids))))
 
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
