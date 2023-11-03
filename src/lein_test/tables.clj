@@ -29,11 +29,16 @@
      :proposed_version_id proposed-version-id
      }))
 
+(defn generate-triple-id
+  [space entity-id attribute-id value-id]
+  (str space ":" entity-id ":" attribute-id ":" value-id)
+  )
+
 (defn ->triple
   "Takes in an action and returns an entry in the triples table"
   [action]
   (let [entity-id (:entityId action) attribute-id (:attributeId action) value-key (value-type (:value action)) value-id (:id (:value action)) value (:value (:value action)) space (:space action)]
-    {:id (str (java.util.UUID/randomUUID))
+    {:id (generate-triple-id space entity-id attribute-id value-id)
      :entity_id entity-id
      :attribute_id attribute-id
      value-key (if (= value-key :entity_value) value-id value)

@@ -202,14 +202,14 @@ CREATE TYPE attribute_with_no_value_type AS (
   [attribute-name attribute-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
     (str "
-        DROP FUNCTION IF EXISTS entities_" attribute-name "(e_row entities);
+        DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
         
-        CREATE FUNCTION entities_" attribute-name "(e_row entities)
+        CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
         RETURNS SETOF attribute_with_relation_value_type AS $$
         BEGIN
           RETURN QUERY
           SELECT 'entity' AS type, e AS entityValue
-          FROM entities e
+          FROM public.entities e
           WHERE e.id IN (
               SELECT t.value_id
               FROM triples t
@@ -223,14 +223,14 @@ CREATE TYPE attribute_with_no_value_type AS (
   [attribute-name attribute-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
     (str "
-        DROP FUNCTION IF EXISTS entities_" attribute-name "(e_row entities);
+        DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
                                                            
-        CREATE FUNCTION entities_" attribute-name "(e_row entities)
+        CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
         RETURNS SETOF attribute_with_scalar_value_type AS $$
         BEGIN
           RETURN QUERY
           SELECT t.value_type AS type, t.string_value AS value
-          FROM triples t
+          FROM public.triples t
           WHERE t.entity_id = e_row.id
           AND t.attribute_id IN (" quoted-ids ")
           AND t.value_type IS NOT NULL;
@@ -241,9 +241,9 @@ CREATE TYPE attribute_with_no_value_type AS (
   [attribute-name attribute-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
     (str "
-        DROP FUNCTION IF EXISTS entities_" attribute-name "(e_row entities);
+        DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
                                                            
-        CREATE FUNCTION entities_" attribute-name "(e_row entities)
+        CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
                RETURNS SETOF attribute_with_scalar_value_type AS $$
                BEGIN
                  RETURN QUERY
@@ -254,7 +254,7 @@ CREATE TYPE attribute_with_no_value_type AS (
                  AND t.value_type IS NOT NULL
                                                                                     
                 e AS entityValue
-                FROM entities e
+                FROM public.entities e
                 WHERE e.id IN (
                   SELECT t.value_id
                   FROM triples t
@@ -271,18 +271,19 @@ CREATE TYPE attribute_with_no_value_type AS (
   [entity]
   (let [attribute-name (parse-pg-fn-name (:entities/name entity))
         value-type (classify-attribute-value-type (:entities/value_type entity))
-        attribute-ids (map str [(:entities/id entity)])]
+        attribute-ids (map str [(:entities/id entity)])
+        protected-attribute-names ["name" "description" "entity_id" "is_type" "defined_in" "value_type_id" "version" "id"]]
 
-    (cond
-      (= value-type "relation")
-      (entity->attribute-relation-fn attribute-name attribute-ids)
+    (when (not (contains? (set protected-attribute-names) attribute-name))
+      (cond
+        (= value-type "relation")
+        (entity->attribute-relation-fn attribute-name attribute-ids)
 
-      (nil? value-type)
-      (entity->attribute-no-value-fn attribute-name attribute-ids)
+        (nil? value-type)
+        (entity->attribute-no-value-fn attribute-name attribute-ids)
 
-
-      :else
-      (entity->attribute-relation-fn attribute-name attribute-ids))))
+        :else
+        (entity->attribute-scalar-fn attribute-name attribute-ids)))))
 
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
@@ -314,6 +315,9 @@ END $$;
   (let [attribute-entities (get-all-attribute-entities)]
     (doseq [entity attribute-entities]
       (when (parse-pg-fn-name (:entities/name entity))
-        (try-execute-raw-sql (entity->attribute-fn-wrapper entity))))))
+        (let [fn-wrapper (entity->attribute-fn-wrapper entity)]
+          (when fn-wrapper
+            (try-execute-raw-sql fn-wrapper))))))
+)
     
   
