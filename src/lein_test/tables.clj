@@ -37,7 +37,7 @@
 (defn ->triple
   "Takes in an action and returns an entry in the triples table"
   [action]
-  (let [entity-id (:entityId action) attribute-id (:attributeId action) value-key (value-type (:value action)) value-id (:id (:value action)) value (:value (:value action)) space (:space action)]
+  (let [action-type (:type action) entity-id (:entityId action) attribute-id (:attributeId action) value-key (value-type (:value action)) value-id (:id (:value action)) value (:value (:value action)) space (:space action)]
     {:id (generate-triple-id space entity-id attribute-id value-id)
      :entity_id entity-id
      :attribute_id attribute-id
@@ -46,7 +46,8 @@
      :value_type (:type (:value action))
      :defined_in space
      :is_protected false
-     :deleted false}))
+     :deleted (if (= action-type "deleteTriple") true false)
+     }))
 
 (defn ->entity
   "Takes in an action and returns an entry in the entities table"

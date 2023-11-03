@@ -6,8 +6,7 @@
             [honey.sql :as sql]
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
-            [lein-test.db-helpers :refer [try-execute]]
-            [lein-test.pg-function-helpers :refer [populate-pg-functions]]
+            [lein-test.db-helpers :refer [bootstrap-db try-execute]]
             [lein-test.spec.action :as action]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
@@ -55,23 +54,30 @@
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
   [actions]
-  (let [formatted-sql (-> (h/insert-into :public/entities)
-                          (h/values (into [] (map ->entity actions)))
-                          (h/on-conflict :id (h/do-nothing))
-                          (sql/format {:pretty true})
-                          try-execute)]
-    (println "Generated SQL:" formatted-sql)
-    formatted-sql))
+  (let [filtered-actions (filter #(not (nil? (:entityId %))) actions)]
+    (when (< 0 (count filtered-actions))
+      (-> (h/insert-into :public/entities)
+          (h/values (into [] (map ->entity filtered-actions)))
+          (h/on-conflict :id (h/do-nothing))
+          (sql/format {:pretty true})
+          try-execute))))
 
 
 (defn populate-triples
   "Takes in a seq of actions and populates the `triples` table"
   [actions]
-  (-> (h/insert-into :public/triples)
-      (h/values (map ->triple actions))
-      (h/on-conflict :id (h/do-update-set :deleted))
-      (sql/format {:pretty true})
-      try-execute))
+  (doseq [action actions]
+    (if (:deleted (->triple action))
+      (-> (h/update :public/triples)
+          (h/values {:deleted true})
+          (h/where [:= :id (:id (->triple action))])
+          (sql/format {:pretty true})
+          try-execute)
+      (-> (h/insert-into :public/triples)
+          (h/values [(->triple action)])
+          (h/on-conflict :id (h/do-nothing))
+          (sql/format {:pretty true})
+          try-execute))))
 
 (defn populate-actions
   "Takes in a seq of actions and populates the `actions` table"
@@ -251,12 +257,12 @@
   [& args]
   (time
    (do
-    ;; (time (bootstrap-db))
-    ;; (time (doall (map #(populate-db :entities %) files)))
-    ;; (time (doall (map #(populate-db :triples %) files)))
-    ;; (time (doall (map #(populate-db :spaces %) files)))
-    ;; (time (doall (map #(populate-db :accounts %) files)))
-    ;; (time (doall (map #(populate-db :columns %) files)))
-    ;; (time (doall (map #(populate-db :proposals %) files)))
-     (populate-pg-functions)
+     (time (bootstrap-db))
+     (time (doall (map #(populate-db :entities %) files)))
+     (time (doall (map #(populate-db :triples %) files)))
+     (time (doall (map #(populate-db :spaces %) files)))
+     (time (doall (map #(populate-db :accounts %) files)))
+     (time (doall (map #(populate-db :columns %) files)))
+     (time (doall (map #(populate-db :proposals %) files)))
+    ;;  (populate-pg-functions)
      (println "done with everything"))))
