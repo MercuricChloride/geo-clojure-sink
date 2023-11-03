@@ -6,7 +6,7 @@
             [honey.sql :as sql]
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
-            [lein-test.db-helpers :refer [bootstrap-db try-execute]]
+            [lein-test.db-helpers :refer [try-execute]]
             [lein-test.pg-function-helpers :refer [populate-pg-functions]]
             [lein-test.spec.action :as action]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
@@ -69,16 +69,21 @@
   [actions]
     (let [create-triple-actions (filter #(= (:type %) "createTriple") actions)
           delete-triple-actions (filter #(= (:type %) "deleteTriple") actions)]
+      (when (< 0 (count create-triple-actions))    
       (-> (h/insert-into :public/triples)
           (h/values (map ->triple create-triple-actions))
           (h/on-conflict :id (h/do-nothing))
           (sql/format {:pretty true})
           try-execute)
+      )
+
+     (when (< 0 (count delete-triple-actions))     
       (-> (h/update :public/triples)
           (h/values [{:deleted true}])
-          (h/where [:= :id (map :id create-triple-actions)])
+          (h/where [:in :id (map :id (map ->triple delete-triple-actions))])
           (sql/format {:pretty true})
           try-execute))
+    )
 )
   
 
@@ -259,8 +264,8 @@
 (defn -main
   "I DO SOMETHING NOW!"
   [& args]
-    (time (bootstrap-db))
-    (time (doall (map #(populate-db :entities %) files)))
+    ;; (time (bootstrap-db))
+    ;; (time (doall (map #(populate-db :entities %) files)))
     (time (doall (map #(populate-db :triples %) files)))
     (time (doall (map #(populate-db :spaces %) files)))
     (time (doall (map #(populate-db :accounts %) files)))
