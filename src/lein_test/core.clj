@@ -7,6 +7,7 @@
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [bootstrap-db try-execute]]
+            [lein-test.pg-function-helpers :refer [populate-pg-functions]]
             [lein-test.spec.action :as action]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
@@ -66,18 +67,20 @@
 (defn populate-triples
   "Takes in a seq of actions and populates the `triples` table"
   [actions]
-  (doseq [action actions]
-    (if (:deleted (->triple action))
-      (-> (h/update :public/triples)
-          (h/values {:deleted true})
-          (h/where [:= :id (:id (->triple action))])
-          (sql/format {:pretty true})
-          try-execute)
+    (let [create-triple-actions (filter #(= (:type %) "createTriple") actions)
+          delete-triple-actions (filter #(= (:type %) "deleteTriple") actions)]
       (-> (h/insert-into :public/triples)
-          (h/values [(->triple action)])
+          (h/values (map ->triple create-triple-actions))
           (h/on-conflict :id (h/do-nothing))
           (sql/format {:pretty true})
-          try-execute))))
+          try-execute)
+      (-> (h/update :public/triples)
+          (h/values [{:deleted true}])
+          (h/where [:= :id (map :id create-triple-actions)])
+          (sql/format {:pretty true})
+          try-execute))
+)
+  
 
 (defn populate-actions
   "Takes in a seq of actions and populates the `actions` table"
@@ -96,6 +99,7 @@
           (h/on-conflict :id (h/do-nothing))
           (sql/format {:pretty true})
           try-execute))))
+
 
 
 (defn entry->actions
@@ -255,14 +259,12 @@
 (defn -main
   "I DO SOMETHING NOW!"
   [& args]
-  (time
-   (do
-     (time (bootstrap-db))
-     (time (doall (map #(populate-db :entities %) files)))
-     (time (doall (map #(populate-db :triples %) files)))
-     (time (doall (map #(populate-db :spaces %) files)))
-     (time (doall (map #(populate-db :accounts %) files)))
-     (time (doall (map #(populate-db :columns %) files)))
-     (time (doall (map #(populate-db :proposals %) files)))
-    ;;  (populate-pg-functions)
-     (println "done with everything"))))
+    (time (bootstrap-db))
+    (time (doall (map #(populate-db :entities %) files)))
+    (time (doall (map #(populate-db :triples %) files)))
+    (time (doall (map #(populate-db :spaces %) files)))
+    (time (doall (map #(populate-db :accounts %) files)))
+    (time (doall (map #(populate-db :columns %) files)))
+    (time (doall (map #(populate-db :proposals %) files)))
+     (populate-pg-functions)
+     (println "done with everything"))

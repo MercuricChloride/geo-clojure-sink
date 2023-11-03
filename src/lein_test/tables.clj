@@ -52,8 +52,10 @@
 (defn ->entity
   "Takes in an action and returns an entry in the entities table"
   [action]
-  (let [entityId (:entityId action)]
-    {:id entityId}))
+  (let [entityId (:entityId action) space (:space action)]
+    {:id entityId
+     :defined_in space
+     }))
 
 (defn ->entity-type
   "Takes in an action and returns an entry in the entity_types table"
