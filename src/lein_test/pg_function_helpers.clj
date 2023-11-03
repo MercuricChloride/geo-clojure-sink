@@ -158,12 +158,12 @@
 
 
 (defn parse-pg-fn-name [type-name]
-  (if (not (= (type type-name) java.lang.String))
-    (println "Invalid type name" type-name)
-    (-> (str type-name)
+  (when (and (string? type-name) (not (empty? type-name)))
+    (-> type-name
         s/lower-case
         (s/replace " " "_")
-        (s/replace #"[^a-z_]" ""))))
+        (s/replace #"[^a-z_]" "")
+        (s/trim))))
 
 
 (defn fn-parsed-attribute-values
@@ -200,7 +200,11 @@ CREATE TYPE attribute_with_no_value_type AS (
 
 (defn entity->attribute-relation-fn
   [attribute-name attribute-ids]
-  (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
+  (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
+  (str "
+        DROP FUNCTION IF EXISTS entities_" attribute-name "(e_row entities);
+        
+        CREATE FUNCTION entities_" attribute-name "(e_row entities)
         RETURNS SETOF attribute_with_relation_value_type AS $$
         BEGIN
           RETURN QUERY
@@ -210,10 +214,10 @@ CREATE TYPE attribute_with_no_value_type AS (
               SELECT t.value_id
               FROM triples t
               WHERE t.entity_id = e_row.id
-              AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) ")
+              AND t.attribute_id IN (" quoted-ids ")
           );
         END;
-        $$ LANGUAGE plpgsql STRICT STABLE;"))
+        $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 (defn entity->attribute-scalar-fn
   [attribute-name attribute-ids]
@@ -224,14 +228,15 @@ CREATE TYPE attribute_with_no_value_type AS (
           SELECT t.value_type AS type, t.string_value AS value
           FROM triples t
           WHERE t.entity_id = e_row.id
-          AND t.attribute_id IN (" (clojure.string/join ", " attribute-ids) ")
+          AND t.attribute_id IN ("' (clojure.string/join ", " attribute-ids) '")
           AND t.value_type IS NOT NULL;
         END;
         $$ LANGUAGE plpgsql STRICT STABLE;"))
 
 (defn entity->attribute-no-value-fn
   [attribute-name attribute-ids]
-  (str "CREATE OR REPLACE FUNCTION entities_" attribute-name "(e_row entities)
+  (str "
+        CREATE FUNCTION entities_" attribute-name "(e_row entities)
                RETURNS SETOF attribute_with_scalar_value_type AS $$
                BEGIN
                  RETURN QUERY
@@ -266,29 +271,42 @@ CREATE TYPE attribute_with_no_value_type AS (
       (entity->attribute-relation-fn attribute-name attribute-ids)
 
       (nil? value-type)
-      (entity->attribute-no-value-fn attribute-name attribute-ids)
+      ;; (entity->attribute-no-value-fn attribute-name attribute-ids)
+      (entity->attribute-relation-fn attribute-name attribute-ids)
+
 
       :else
-      (entity->attribute-scalar-fn attribute-name attribute-ids))))
+      ;; (entity->attribute-relation-fn attribute-name attribute-ids)
+      (entity->attribute-relation-fn attribute-name attribute-ids)))
+  )
 
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
 
 
-(defn drop-all-pg-functions
+(defn drop-pg-functions+types
   []
-  "DROP FUNCTION IF EXISTS pg_catalog.pg_function CASCADE")
+  "
+   DO $$ DECLARE
+    r RECORD;
+BEGIN
+    FOR r IN (SELECT proname FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')) LOOP
+        EXECUTE 'DROP FUNCTION IF EXISTS ' || r.proname || ' CASCADE';
+    END LOOP;
+END $$;
+   ")
+
 
 (defn populate-pg-functions
   "Prepares some type and schema GraphQL queries for Postgraphile"
   []
-  (try-execute-raw-sql (drop-all-pg-functions))
+  (try-execute-raw-sql (drop-pg-functions+types))
   (try-execute-raw-sql (fn-entities-types))
   (try-execute-raw-sql (fn-entities-type-count))
   (try-execute-raw-sql (fn-entities-attributes))
   (try-execute-raw-sql (fn-entities-attribute-count))
   (try-execute-raw-sql (fn-entities-schema))
-  (try-execute-raw-sql (fn-parsed-attribute-values))
+  ;; (try-execute-raw-sql (fn-parsed-attribute-values))
   (let [attribute-entities (get-all-attribute-entities)]
     (doseq [entity attribute-entities]
       (when (parse-pg-fn-name (:entities/name entity))
