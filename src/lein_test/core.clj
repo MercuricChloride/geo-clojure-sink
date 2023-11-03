@@ -77,12 +77,13 @@
           try-execute)
       )
 
-     (when (< 0 (count delete-triple-actions))     
+     (when (< 0 (count delete-triple-actions))
+      (let [triple-ids (mapv (comp :id ->triple) delete-triple-actions)]
       (-> (h/update :public/triples)
-          (h/values [{:deleted true}])
-          (h/where [:in :id (map :id (map ->triple delete-triple-actions))])
+          (h/set {:deleted true})
+          (h/where [:in :id triple-ids])
           (sql/format {:pretty true})
-          try-execute))
+          try-execute)))
     )
 )
   
