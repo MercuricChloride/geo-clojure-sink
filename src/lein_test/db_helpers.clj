@@ -5,6 +5,7 @@
             [honey.sql.helpers :as h]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES
                                          ROOT-SPACE-ADDRESS]]
+            [lein-test.tables :refer [generate-triple-id]]
             [next.jdbc :as jdbc]
             [next.jdbc.connection :as connection])
   (:import (com.zaxxer.hikari HikariDataSource)))
@@ -165,7 +166,7 @@
                                                                    entity-id (:id entity)
                                                                    attribute-id (:id (:type ATTRIBUTES))
                                                                    value-id (:id (:schema-type ENTITIES))]
-                                                               {:id (str (java.util.UUID/randomUUID))
+                                                               {:id (generate-triple-id ROOT-SPACE-ADDRESS entity-id attribute-id value-id)
                                                                 :entity_id entity-id
                                                                 :attribute_id attribute-id
                                                                 :value_id value-id
@@ -182,7 +183,7 @@
                                                                    entity-id (:id entity)
                                                                    attribute-id (:id (:type ATTRIBUTES))
                                                                    value-id (:id (:attribute ENTITIES))]
-                                                               {:id (str (java.util.UUID/randomUUID))
+                                                               {:id (generate-triple-id ROOT-SPACE-ADDRESS entity-id attribute-id value-id)
                                                                 :entity_id entity-id
                                                                 :attribute_id attribute-id
                                                                 :value_id value-id
