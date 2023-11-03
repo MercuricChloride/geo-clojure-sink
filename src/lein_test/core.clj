@@ -61,8 +61,7 @@
                           (sql/format {:pretty true})
                           try-execute)]
     (println "Generated SQL:" formatted-sql)
-    formatted-sql
-    ))
+    formatted-sql))
 
 
 (defn populate-triples
@@ -70,7 +69,7 @@
   [actions]
   (-> (h/insert-into :public/triples)
       (h/values (map ->triple actions))
-      (h/on-conflict :id (h/do-nothing))
+      (h/on-conflict :id (h/do-update-set :deleted))
       (sql/format {:pretty true})
       try-execute))
 
@@ -86,11 +85,11 @@
 (defn populate-spaces [actions]
   (let [filtered (filter #(= (:attributeId %) "space") actions)]
     (when (< 0 (count filtered))
-        (-> (h/insert-into :spaces)
-            (h/values (into [] (map ->spaces filtered)))
-            (h/on-conflict :id (h/do-nothing))
-            (sql/format {:pretty true})
-            try-execute))))
+      (-> (h/insert-into :spaces)
+          (h/values (into [] (map ->spaces filtered)))
+          (h/on-conflict :id (h/do-nothing))
+          (sql/format {:pretty true})
+          try-execute))))
 
 
 (defn entry->actions
@@ -107,11 +106,8 @@
       :created-at-block created-at-block
       :created-by author
       :entity (:entityId (first action-map))
-      :proposal-id proposal-id
-      }
-     (map #(->action % proposed-version-id) action-map)]
-    )
-  )
+      :proposal-id proposal-id}
+     (map #(->action % proposed-version-id) action-map)]))
 
 (defn new-proposal
   [created-at-block timestamp author proposal-id space]
@@ -164,13 +160,13 @@
   [log-entry]
   (let [[proposal proposed-version+actions] (entry->proposal log-entry)]
     (populate-proposal proposal)
-            (map populate-proposed-version+actions proposed-version+actions)))
+    (map populate-proposed-version+actions proposed-version+actions)))
 
 (defn- entry->author
   [entry]
   (->> entry
-     first
-     :author))
+       first
+       :author))
 
 (defn populate-account
   [log-entry]
@@ -213,8 +209,44 @@
         value-type-attr-id (:id (:value-type ATTRIBUTES))
         type (:id (:type ATTRIBUTES))
         attribute (:id (:attribute ENTITIES))
-        schema-type (:id (:schema-type ENTITIES))  
-        ]
+        schema-type (:id (:schema-type ENTITIES))]
+    (doseq [action actions]
+      (let [triple (->triple action)
+            is-name-update (and (= (:attribute_id triple) name-attr-id)
+                                (= (:value_type triple) "string"))
+            is-description-update (and (= (:attribute_id triple) description-attr-id)
+                                       (= (:value_type triple) "string"))
+            is-value-type-update (and (= (:attribute_id triple) value-type-attr-id)
+                                      (= (:value_type triple) "entity"))
+            is-type-flag-update (and (= (:attribute_id triple) type)
+                                     (= (:value_id triple) schema-type))
+            is-attribute-flag-update (and (= (:attribute_id triple) type)
+                                          (= (:value_id triple) attribute))
+            action-type (:type action)
+            is-delete-triple (= action-type "deleteTriple")]
+
+        (when is-name-update
+          (update-entity (:entity_id triple) :name (if is-delete-triple nil (:string_value triple))))
+        (when is-description-update
+          (update-entity (:entity_id triple) :description (if is-delete-triple nil (:string_value triple))))
+        (when is-value-type-update
+          (update-entity (:entity_id triple) :value_type_id (if is-delete-triple nil (:value_id triple))))
+        (when is-type-flag-update
+          (update-entity (:entity_id triple) :is_type (if is-delete-triple nil (boolean (:value_id triple)))))
+        (when is-attribute-flag-update
+          (update-entity (:entity_id triple) :is_attribute (if is-delete-triple nil (boolean (:value_id triple)))))))))
+
+
+
+(defn populate-functions
+  "Takes actions as arguments, processes them to find blessed columns to update and updates them."
+  [actions]
+  (let [name-attr-id (:id (:name ATTRIBUTES))
+        description-attr-id (:id (:description ATTRIBUTES))
+        value-type-attr-id (:id (:value-type ATTRIBUTES))
+        type (:id (:type ATTRIBUTES))
+        attribute (:id (:attribute ENTITIES))
+        schema-type (:id (:schema-type ENTITIES))]
     (doseq [action actions]
       (let [triple (->triple action)
             is-name-update (and (= (:attribute_id triple) name-attr-id)
@@ -239,40 +271,6 @@
         (when is-type-flag-update
           (update-entity (:entity_id triple) :is_type (boolean (:value_id triple))))
         (when is-attribute-flag-update
-          (update-entity (:entity_id triple) :is_attribute (boolean (:value_id triple)))
-          )
-        )
-    )))
-
-
-(defn populate-functions
-  "Takes actions as arguments, processes them to find blessed columns to update and updates them."
-  [actions]
-  (let [name-attr-id (:id (:name ATTRIBUTES))
-        description-attr-id (:id (:description ATTRIBUTES))
-        value-type-attr-id (:id (:value-type ATTRIBUTES))
-        type (:id (:type ATTRIBUTES))
-        attribute (:id (:attribute ENTITIES))
-        schema-type (:id (:schema-type ENTITIES))]
-    (doseq [action actions]
-      (let [triple (->triple action)
-            is-name-update (and (= (:attribute_id triple) name-attr-id)
-                                (= (:value_type triple) "string")
-                                (:string_value triple))
-            is-value-type-update (and (= (:attribute_id triple) value-type-attr-id)
-                                      (= (:value_type triple) "entity"))
-            is-type-flag-update (and (= (:attribute_id triple) type)
-                                     (= (:value_id triple) schema-type))
-            is-attribute-flag-update (and (= (:attribute_id triple) type)
-                                          (= (:value_id triple) attribute))]
-
-        (when is-name-update
-          (update-entity (:entity_id triple) :name (:string_value triple)))
-        (when is-value-type-update
-          (update-entity (:entity_id triple) :value_type_id (:value_id triple)))
-        (when is-type-flag-update
-          (update-entity (:entity_id triple) :is_type (boolean (:value_id triple))))
-        (when is-attribute-flag-update
           (update-entity (:entity_id triple) :is_attribute (boolean (:value_id triple))))))))
 
 
@@ -290,8 +288,8 @@
 (defn -main
   "I DO SOMETHING NOW!"
   [& args]
- (time
-  (do
+  (time
+   (do
     ;; (time (bootstrap-db))
     ;; (time (doall (map #(populate-db :entities %) files)))
     ;; (time (doall (map #(populate-db :triples %) files)))
@@ -299,5 +297,5 @@
     ;; (time (doall (map #(populate-db :accounts %) files)))
     ;; (time (doall (map #(populate-db :columns %) files)))
     ;; (time (doall (map #(populate-db :proposals %) files)))
-    (execute-base-pg-fns)
-    (println "done with everything"))))
+     (execute-base-pg-fns)
+     (println "done with everything"))))
