@@ -1,7 +1,6 @@
 (ns lein-test.core
   (:gen-class)
   (:require
-
    [cheshire.core :as ch]
    [lein-test.constants :refer [ENTITIES]]
    [clojure.string :as cstr]
@@ -10,6 +9,7 @@
    [honey.sql :as sql]
    [honey.sql.helpers :as h]
    [next.jdbc :as jdbc]
+   [lein-test.substreams :as substreams]
    [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
    [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]))
 
@@ -63,8 +63,8 @@
                           (sql/format {:pretty true})
                           try-execute)]
     (println "Generated SQL:" formatted-sql)
-    formatted-sql
-    ))
+    formatted-sql))
+    
 
 
 (defn populate-triples
@@ -159,11 +159,11 @@
       :created-at-block created-at-block
       :created-by author
       :entity (:entityId (first action-map))
-      :proposal-id proposal-id
-      }
-     (map #(->action % proposed-version-id) action-map)]
-    )
-  )
+      :proposal-id proposal-id}
+      
+     (map #(->action % proposed-version-id) action-map)]))
+    
+  
 
 (defn new-proposal
   [created-at-block timestamp author proposal-id space]
@@ -174,8 +174,8 @@
    :created-at-block created-at-block
    :created-by author
    :space space
-   :status "APPROVED" ;NOTE THIS IS HARDCODED FOR NOW UNTIL GOVERNANCE FINALIZED
-   })
+   :status "APPROVED"}) ;NOTE THIS IS HARDCODED FOR NOW UNTIL GOVERNANCE FINALIZED
+   
 
 (defn populate-proposal
   [proposal]
@@ -216,7 +216,7 @@
   [log-entry]
   (let [[proposal proposed-version+actions] (entry->proposal log-entry)]
     (populate-proposal proposal)
-            (map populate-proposed-version+actions proposed-version+actions)))
+    (map populate-proposed-version+actions proposed-version+actions)))
 
 (defn- entry->author
   [entry]
@@ -258,12 +258,6 @@
 (defn -main
   "I DO SOMETHING NOW!"
   [& args]
- (time
-  (do
-    ;(time (bootstrap-db))
-    ;(time (doall (map #(populate-db :entities %) files)))
-    ;(time (doall (map #(populate-db :triples %) files)))
-    ;(time (doall (map #(populate-db :spaces %) files)))
-    ;(time (doall (map #(populate-db :accounts %) files)))
-    (time (doall (map #(populate-db :proposals %) files)))
-    (println "done with everything"))))
+  (let [start-block 36472424
+        stop-block 48000000]
+    (substreams/start-stream substreams/client start-block stop-block)))
