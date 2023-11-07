@@ -11,7 +11,7 @@
    [next.jdbc :as jdbc]
    [lein-test.substreams :as substreams]
    [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
-   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]
+   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas get-cursor]]
    [geo.clojure.sink :as geo]))
 
 
@@ -46,7 +46,6 @@
 
 (defn sort-files [files]
   (sort-by (juxt :block :index) files))
-
 
 (def new-files (->> (io/file "./new-cache/entries-added/")
                     file-seq
@@ -274,13 +273,23 @@
         (= type :proposals) (populate-proposals-from-entry log-entry)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
+(def start-block 36472424)
+(def stop-block 48000000)
+
+(defn handle-args
+  [args]
+  (let [args (into #{} args)
+        from-genesis (get "--from-genesis" args)]
+     (when from-genesis
+       (swap! substreams/current-block (fn [_] start-block))
+       (swap! substreams/cursor (fn [_] "")))))
+
 (defn -main
   "I DO SOMETHING NOW!"
   [& args]
-  (let [start 36472424
-        stop 48000000]
-    (swap! substreams/current-block (fn [_] start))
-    (while (< @substreams/current-block stop)
-      (println "Starting stream at block #" @substreams/current-block)
-      (let [client (substreams/spawn-client)]
-        (substreams/start-stream client start stop)))))
+  (handle-args args)
+
+  (while (< (Integer/parseInt @substreams/current-block) stop-block)
+    (println "Starting stream at block #" (str @substreams/current-block))
+    (let [client (substreams/spawn-client)]
+      (substreams/start-stream client start-block stop-block))))

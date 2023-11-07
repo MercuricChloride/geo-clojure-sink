@@ -9,12 +9,12 @@
             [clojure.java.io :as io]
             [clojure.core.async :as async]
             [clojure.string :as string]
-            [lein-test.db-helpers :refer [update-cursor]]
+            [lein-test.db-helpers :refer [update-cursor get-cursor]]
             [sf.substreams.v1 :as v1]))
 
 
-(def current-block (atom 0))
-(def cursor (atom ""))
+(def current-block (atom (:cursors/block_number (get-cursor))))
+(def cursor (atom (:cursors/cursor (get-cursor))))
 
 (defn cursor-watcher
   "Watches the cursor for changes and updates the database"
@@ -114,12 +114,11 @@
   ([client start-block stop-block]
    (let [channel (async/chan (async/buffer 10))]
 
-     (stream/Blocks client (rpc/new-Request {:start-block-num start-block
+     (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
                                              :stop-block-num stop-block
                                              :start-cursor @cursor
                                              :modules (:modules spkg)
                                              :output-module "geo_out"}) channel)
-
      (take-all channel handle-block-scoped-data))))
 
 (defn ipfs-fetch

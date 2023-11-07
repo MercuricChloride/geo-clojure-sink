@@ -27,6 +27,16 @@
       (sql/format)
       try-execute))
 
+(defn get-cursor
+ []
+ (-> (h/select :cursor :block-number)
+     (h/from :public/cursors)
+     (h/where [:= :id 0])
+     (sql/format)
+     try-execute
+     first))
+     
+
 (defn- all-types
   "Returns a seq of all types in the triple store"
   []
