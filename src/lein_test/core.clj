@@ -37,7 +37,6 @@
 
 (defn- extract-file-meta [filename]
   (let [parts (cstr/split filename #"_")]
-    (println parts)
     {:block (Integer/parseInt (get parts 0))
      :index (Integer/parseInt (get parts 1))
      :space (.toLowerCase (get parts 2))
@@ -259,10 +258,6 @@
 ;;     (filter #(not (nil? %)))
 ;;     populate-accounts)
 
-(defn ipfs-fetch
-  [cid]
-  (slurp (str "https://ipfs.network.thegraph.com/api/v0/cat?arg=" cid)))
-
 ;(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))
 
 (defn populate-db [type log-entry]
@@ -279,10 +274,20 @@
 (defn handle-args
   [args]
   (let [args (into #{} args)
-        from-genesis (get "--from-genesis" args)]
-     (when from-genesis
-       (swap! substreams/current-block (fn [_] start-block))
-       (swap! substreams/cursor (fn [_] "")))))
+        from-genesis (get args "--from-genesis")
+        populate-cache (get args "--populate-cache")
+        from-cache (get args "--from-cache")]
+    (when from-genesis
+      (println "from-genesis")
+      (swap! substreams/current-block (fn [_] (str start-block)))
+      (swap! substreams/cursor (fn [_] "")))
+    (when populate-cache
+      (println "populate-cache")
+      (swap! substreams/sink-mode (fn [_] :populate-cache)))
+    (when from-cache
+      (println "from-cache")
+      (swap! substreams/sink-mode (fn [_] :from-cache)))))
+
 
 (defn -main
   "I DO SOMETHING NOW!"
