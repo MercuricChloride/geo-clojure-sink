@@ -43,6 +43,14 @@
        (empty? (:roles-granted input))
        (empty? (:roles-revoked input))))
 
+(defn format-entry-filename
+ [input]
+ (let [block (first (string/split (:id input) #"-"))
+       index (:index input)
+       space (:space input)
+       author (:author input)]
+  (str block "_" index "_" space "_" author)))
+
 (defn process-geo-data
  [geo-output]
  (let [entries (:entries geo-output)
@@ -52,7 +60,7 @@
        granted-path "new-cache/roles-granted/"
        revoked-path "new-cache/roles-revoked/"]
   (doseq [entry entries]
-    (write-file (str entry-path (:id entry)) (protojure/->pb entry)))
+    (write-file (str entry-path (format-entry-filename entry)) (protojure/->pb entry)))
   (doseq [entry roles-granted]
     (write-file (str granted-path (:id entry)) (protojure/->pb entry)))
   (doseq [entry roles-revoked]
@@ -78,8 +86,8 @@
               (println "Got map output at block:" block-number)
               (process-geo-data geo-output)))
             (swap! current-block (fn [_] block-number))
-            (swap! cursor (fn [_] stream-cursor))
-            (println (str "Cursor: " @cursor "\n\n Current block: " @current-block)))))
+            (swap! cursor (fn [_] stream-cursor)))))
+            ;(println (str "Cursor: " @cursor "\n\n Current block: " @current-block)))))
    (catch Exception e
     (println "GOT ERROR: \n\n\n\n\n" e))))
 
@@ -134,4 +142,3 @@
   (->> entries
       (map #(ipfs-fetch (uri->cid (:uri %))))
       (into [])))
-

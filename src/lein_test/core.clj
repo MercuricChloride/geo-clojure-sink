@@ -11,7 +11,8 @@
    [next.jdbc :as jdbc]
    [lein-test.substreams :as substreams]
    [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
-   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]))
+   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]
+   [geo.clojure.sink :as geo]))
 
 
 (defn- validate-actions
@@ -36,15 +37,33 @@
 
 (defn- extract-file-meta [filename]
   (let [parts (cstr/split filename #"_")]
+    (println parts)
     {:block (Integer/parseInt (get parts 0))
      :index (Integer/parseInt (get parts 1))
      :space (.toLowerCase (get parts 2))
-     :author (-> (get parts 3)
-                 (cstr/replace #"\.json" ""))
+     :author (get parts 3)
      :filename filename}))
 
 (defn sort-files [files]
   (sort-by (juxt :block :index) files))
+
+
+(def new-files (->> (io/file "./new-cache/entries-added/")
+                    file-seq
+                    rest
+                    (map #(geo/pb->EntryAdded (substreams/slurp-bytes %)))))
+
+(def roles-granted (->> (io/file "./new-cache/roles-granted/")
+                    file-seq
+                    rest
+                    (map #(geo/pb->RoleGranted (substreams/slurp-bytes %)))
+                    (filter #(not (= (:role %) :null)))))
+
+(def roles-revoked (->> (io/file "./new-cache/roles-revoked/")
+                    file-seq
+                    rest
+                    (map #(geo/pb->RoleRevoked (substreams/slurp-bytes %)))
+                    (filter #(not (= (:role %) :null)))))
 
 (def files (->> (io/file "./action_cache/")
                 file-seq
