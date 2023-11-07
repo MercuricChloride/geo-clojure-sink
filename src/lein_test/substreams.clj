@@ -9,11 +9,19 @@
             [clojure.java.io :as io]
             [clojure.core.async :as async]
             [clojure.string :as string]
+            [lein-test.db-helpers :refer [update-cursor]]
             [sf.substreams.v1 :as v1]))
 
 
 (def current-block (atom 0))
 (def cursor (atom ""))
+
+(defn cursor-watcher
+  "Watches the cursor for changes and updates the database"
+ [key ref old-state new-state]
+ (update-cursor new-state @current-block))
+
+(add-watch cursor :watcher cursor-watcher)
 
 (defn take-all [ch f]
   (loop []

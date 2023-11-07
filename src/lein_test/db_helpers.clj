@@ -12,11 +12,20 @@
                            {:dbtype "postgres" :dbname (env "GEO_DB_NAME") :username (env "GEO_DB_USERNAME") :password (env "GEO_DB_PASSWORD") :maximumPoolSize 10
                             :dataSourceProperties {:socketTimeout 30}}))
 
+
 (defn try-execute [query]
   (try
     (jdbc/execute! ds query)
     (catch Exception e
       (println e "Failed to execute query!" query))))
+
+(defn update-cursor
+  [cursor-string block-number]
+  (-> (h/insert-into :cursors)
+      (h/values [{:id 0 :cursor cursor-string :block-number block-number}])
+      (h/on-conflict :id (h/do-update-set :cursor :block-number))
+      (sql/format)
+      try-execute))
 
 (defn- all-types
   "Returns a seq of all types in the triple store"
