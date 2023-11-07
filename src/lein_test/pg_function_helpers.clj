@@ -273,42 +273,42 @@ CREATE TYPE attribute_with_no_value_type AS (
                $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 
-(defn entity->attribute-count
-  [entity]
-  (let [attribute-name (parse-pg-fn-name (:entities/name entity))]
-    (str "
-        DROP FUNCTION IF EXISTS public.entities_" attribute-name "_count(e_row public.entities);
+(defn entity-name->attribute-count
+  [name]
+  (str "
+        DROP FUNCTION IF EXISTS public.entities_" name "_count(e_row public.entities);
                                                            
-        CREATE FUNCTION public.entities_" attribute-name "_count(e_row public.entities)
+        CREATE FUNCTION public.entities_" name "_count(e_row public.entities)
          RETURNS integer AS $$
     DECLARE
         attribute_count integer;
     BEGIN
         SELECT count(*)
         INTO attribute_count
-        FROM public.entities_" attribute-name "(e_row);
+        FROM public.entities_" name "(e_row);
         RETURN attribute_count;
     END;
-  $$ LANGUAGE plpgsql STRICT STABLE;")))
+  $$ LANGUAGE plpgsql STRICT STABLE;"))
 
 
-(defn entity->attribute-fn-wrapper
-  [entity]
-  (let [attribute-name (parse-pg-fn-name (:entities/name entity))
-        value-type (classify-attribute-value-type (:entities/attribute_value_type_id entity))
-        attribute-ids (map str [(:entities/id entity)])]
+(defn entities->attribute-fn
+  [name entities]
+  (let [value-types (map #(classify-attribute-value-type (:entities/attribute_value_type_id %)) entities)
+        attribute-ids (map #(str (:entities/id %)) entities)
+        all-relations? (every? #(= "relation" %) value-types)
+        all-nil? (every? nil? value-types)]
 
-    (println value-type)
+    (println value-types)
 
     (cond
-      (= value-type "relation")
-      (entity->attribute-relation-fn attribute-name attribute-ids)
+      all-relations?
+      (entity->attribute-relation-fn name attribute-ids)
 
-      (nil? value-type)
-      (entity->attribute-no-value-fn attribute-name attribute-ids)
+      all-nil?
+      (entity->attribute-no-value-fn name attribute-ids)
 
       :else
-      (entity->attribute-scalar-fn attribute-name attribute-ids))))
+      (entity->attribute-scalar-fn name attribute-ids))))
 
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
@@ -340,10 +340,9 @@ END $$;
   (let [attribute-entities (->> (get-all-attribute-entities)
                                 (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
                                 (into {}))]
-    (doseq [[_ entities] attribute-entities]
-      (doseq [entity entities]
-        (when (seq (parse-pg-fn-name (:entities/name entity)))
-          (try-execute-raw-sql (entity->attribute-fn-wrapper entity))
-          (try-execute-raw-sql (entity->attribute-count entity)))))))
+    (doseq [[name entities] attribute-entities]
+      (when (and (not (nil? name)) (not (= "" name)))
+        (try-execute-raw-sql (entities->attribute-fn name entities)))
+        (try-execute-raw-sql (entity-name->attribute-count name)))))
     
   
