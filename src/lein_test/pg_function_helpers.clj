@@ -1,5 +1,6 @@
 (ns lein-test.pg-function-helpers
-  (:require [clojure.string :as s]
+  (:require [clojure.data.json :as json]
+            [clojure.string :as s]
             [honey.sql :as sql]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [get-all-attribute-entities
@@ -172,21 +173,18 @@
   "
   DROP TYPE IF EXISTS attribute_with_scalar_value_type CASCADE;
 CREATE TYPE attribute_with_scalar_value_type AS (
-    id text,
     type text,
     value text
 );
 
    DROP TYPE IF EXISTS attribute_with_relation_value_type CASCADE;
 CREATE TYPE attribute_with_relation_value_type AS (
-    id text,
     type text, 
     entityValue public.entities 
 );
 
    DROP TYPE IF EXISTS attribute_with_no_value_type CASCADE;
 CREATE TYPE attribute_with_no_value_type AS (
-    id text,
     type text,
     value text,
     entityValue public.entities 
@@ -270,6 +268,25 @@ CREATE TYPE attribute_with_no_value_type AS (
                $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 
+(defn entity->attribute-count
+  [entity]
+  (let [attribute-name (parse-pg-fn-name (:entities/name entity))]
+    (str "
+        DROP FUNCTION IF EXISTS public.entities_" attribute-name "_count(e_row public.entities);
+                                                           
+        CREATE FUNCTION public.entities_" attribute-name "_count(e_row public.entities)
+         RETURNS integer AS $$
+    DECLARE
+        attribute_count integer;
+    BEGIN
+        SELECT count(*)
+        INTO attribute_count
+        FROM public.entities_" attribute-name "(e_row);
+        RETURN attribute_count;
+    END;
+  $$ LANGUAGE plpgsql STRICT STABLE;")))
+
+
 (defn entity->attribute-fn-wrapper
   [entity]
   (let [attribute-name (parse-pg-fn-name (:entities/name entity))
@@ -315,12 +332,15 @@ END $$;
   (try-execute-raw-sql (fn-entities-attribute-count))
   (try-execute-raw-sql (fn-entities-schema))
   (try-execute-raw-sql (fn-parsed-attribute-values))
-  (let [attribute-entities (get-all-attribute-entities)]
+  (let [attribute-entities (->> (get-all-attribute-entities)
+                                (group-by :entities/name)
+                                (map (fn [[_ entities]] (first entities))))]
+    (println (json/write-str attribute-entities))
     (doseq [entity attribute-entities]
       (when (parse-pg-fn-name (:entities/name entity))
         (let [fn-wrapper (entity->attribute-fn-wrapper entity)]
           (when fn-wrapper
-            (try-execute-raw-sql fn-wrapper))))))
-)
+            (try-execute-raw-sql fn-wrapper)
+            (try-execute-raw-sql (entity->attribute-count entity))))))))
     
   
