@@ -11,6 +11,10 @@
             [clojure.string :as string]
             [sf.substreams.v1 :as v1]))
 
+
+(def current-block (atom 0))
+(def cursor (atom ""))
+
 (defn take-all [ch f]
   (loop []
     (let [val (async/<!! ch)]
@@ -46,21 +50,21 @@
        roles-revoked (:roles-revoked geo-output)
        entry-path "new-cache/entries-added/"
        granted-path "new-cache/roles-granted/"
-       revoked-path "new-cache/roles-revoked"]
+       revoked-path "new-cache/roles-revoked/"]
   (doseq [entry entries]
     (write-file (str entry-path (:id entry)) (protojure/->pb entry)))
   (doseq [entry roles-granted]
     (write-file (str granted-path (:id entry)) (protojure/->pb entry)))
   (doseq [entry roles-revoked]
-    (write-file (str revoked-path (:id entry)) (protojure/->pb entry)))
-  69))
+    (write-file (str revoked-path (:id entry)) (protojure/->pb entry)))))
 
 (defn handle-block-scoped-data
   [data]
   (try
    (let [message (:message data)
-         block-data (:block-scoped-data message)]
-     (if block-data
+         block-data (:block-scoped-data message)
+         stream-cursor (:cursor block-data)]
+     (when block-data
        (let [
              output (:output block-data)
              map-output (:map-output output)
@@ -72,28 +76,34 @@
               (println "Empty block at: " block-number))
              (do
               (println "Got map output at block:" block-number)
-              (process-geo-data geo-output))))
-      42))
+              (process-geo-data geo-output)))
+            (swap! current-block (fn [_] block-number))
+            (swap! cursor (fn [_] stream-cursor))
+            (println (str "Cursor: " @cursor "\n\n Current block: " @current-block)))))
    (catch Exception e
     (println "GOT ERROR: \n\n\n\n\n" e))))
 
 
 (def spkg (v1/pb->Package (slurp-bytes "geo-substream-v1.0.2.spkg")))
 
-(def client @(grpc.http2/connect {:uri "https://polygon.substreams.pinax.network:443"
-                                  :ssl true
-                                  :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
+(defn spawn-client [] @(grpc.http2/connect {:uri "https://polygon.substreams.pinax.network:443"
+                                            :ssl true
+                                            :idle-timeout 60000
+                                            :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
+
 
 (defn start-stream
   ([client]
    (start-stream client 36472424 48000000))
   ([client start-block stop-block]
    (let [channel (async/chan (async/buffer 10))]
-     ; we start a thread to initiate the stream
+
      (stream/Blocks client (rpc/new-Request {:start-block-num start-block
                                              :stop-block-num stop-block
+                                             :start-cursor @cursor
                                              :modules (:modules spkg)
                                              :output-module "geo_out"}) channel)
+
      (take-all channel handle-block-scoped-data))))
 
 (defn ipfs-fetch
