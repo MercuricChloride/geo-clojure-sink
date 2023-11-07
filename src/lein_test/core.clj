@@ -258,6 +258,7 @@
 (defn -main
   "I DO SOMETHING NOW!"
   [& args]
-  (let [start-block 36472424
-        stop-block 48000000]
-    (substreams/start-stream substreams/client start-block stop-block)))
+  (let [start 36472424
+        stop (+ 10000 start)]
+    (substreams/start-stream substreams/client start stop)
+    (println "sadflkjsadflkjasflkj")))
