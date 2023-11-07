@@ -1,6 +1,5 @@
 (ns lein-test.pg-function-helpers
-  (:require [clojure.data.json :as json]
-            [clojure.string :as s]
+  (:require [clojure.string :as s]
             [honey.sql :as sql]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [get-all-attribute-entities
@@ -157,15 +156,20 @@
     $$ LANGUAGE plpgsql STRICT STABLE;"))
 
 
+(def protected-attribute-names
+  ["name" "description" "entity_id" "is_type" "defined_in" "value_type_id" "version" "id"])
 
-(defn parse-pg-fn-name [type-name]
-  (if (and (string? type-name) (not (empty? type-name)))
-    (-> type-name
-        s/trim
-        s/lower-case
-        (s/replace " " "_")
-        (s/replace #"[^a-z_]" ""))
-    ""))
+(defn parse-pg-fn-name [fn-name]
+  (if (and (string? fn-name) (seq fn-name))
+    (let [parsed-name (-> fn-name
+                          s/trim
+                          s/lower-case
+                          (s/replace " " "_")
+                          (s/replace #"[^a-z_]" ""))]
+      (if (some #{parsed-name} protected-attribute-names)
+        nil
+        parsed-name))
+    nil))
 
 
 (defn fn-parsed-attribute-values
@@ -292,19 +296,17 @@ CREATE TYPE attribute_with_no_value_type AS (
   [entity]
   (let [attribute-name (parse-pg-fn-name (:entities/name entity))
         value-type (classify-attribute-value-type (:entities/value_type entity))
-        attribute-ids (map str [(:entities/id entity)])
-        protected-attribute-names ["name" "description" "entity_id" "is_type" "defined_in" "value_type_id" "version" "id"]]
+        attribute-ids (map str [(:entities/id entity)])]
 
-    (when (not (contains? (set protected-attribute-names) attribute-name))
-      (cond
-        (= value-type "relation")
-        (entity->attribute-relation-fn attribute-name attribute-ids)
+    (cond
+      (= value-type "relation")
+      (entity->attribute-relation-fn attribute-name attribute-ids)
 
-        (nil? value-type)
-        (entity->attribute-no-value-fn attribute-name attribute-ids)
+      (nil? value-type)
+      (entity->attribute-no-value-fn attribute-name attribute-ids)
 
-        :else
-        (entity->attribute-scalar-fn attribute-name attribute-ids)))))
+      :else
+      (entity->attribute-scalar-fn attribute-name attribute-ids))))
 
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
@@ -335,14 +337,11 @@ END $$;
   (try-execute-raw-sql (fn-parsed-attribute-values))
   (let [attribute-entities (->> (get-all-attribute-entities)
                                 (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
-                                (map (fn [[name entities]] [name (first entities)]))
                                 (into {}))]
-    (println (json/write-str attribute-entities))
-    (doseq [[_ entity] attribute-entities]
-      (when (parse-pg-fn-name (:entities/name entity))
-        (let [fn-wrapper (entity->attribute-fn-wrapper entity)]
-          (when fn-wrapper
-            (try-execute-raw-sql fn-wrapper)
-            (try-execute-raw-sql (entity->attribute-count entity))))))))
+    (doseq [[_ entities] attribute-entities]
+      (doseq [entity entities]
+        (when (seq (parse-pg-fn-name (:entities/name entity)))
+          (try-execute-raw-sql (entity->attribute-fn-wrapper entity))
+          (try-execute-raw-sql (entity->attribute-count entity)))))))
     
   
