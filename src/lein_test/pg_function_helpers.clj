@@ -188,11 +188,12 @@ CREATE TYPE attribute_with_relation_value_type AS (
     entity_value public.entities 
 );
 
-   DROP TYPE IF EXISTS attribute_with_no_value_type CASCADE;
-CREATE TYPE attribute_with_no_value_type AS (
+   DROP TYPE IF EXISTS attribute_with_unknown_value_type CASCADE;
+CREATE TYPE attribute_with_unknown_value_type AS (
     type text,
     value text,
     entity_value public.entities 
+    
 );
  ")
 
@@ -201,7 +202,7 @@ CREATE TYPE attribute_with_no_value_type AS (
   (cond
     (nil? id) "unknown"
     (= id (:id (:relation ENTITIES))) "relation"
-    :else "primitive"))
+    :else "scalar"))
 
 
 (defn entity->attribute-relation-fn
@@ -243,33 +244,36 @@ CREATE TYPE attribute_with_no_value_type AS (
         END;
         $$ LANGUAGE plpgsql STRICT STABLE;")))
 
-(defn entity->attribute-no-value-fn
+(defn entity->attribute-unknown-value-fn
   [attribute-name attribute-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") attribute-ids))]
     (str "
-        DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
-                                                           
+      DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
+        
         CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
-               RETURNS SETOF attribute_with_no_value_type AS $$
-               BEGIN
-                 RETURN QUERY
-                 SELECT t.value_type AS type, t.string_value AS value
-                 FROM triples t
-                 WHERE t.entity_id = e_row.id
-                 AND t.attribute_id IN (" quoted-ids ")
-                 AND t.value_type IS NOT NULL
-                                                                                    
-                e AS entity_value
-                FROM public.entities e
-                WHERE e.id IN (
-                  SELECT t.value_id
-                  FROM triples t
-                  WHERE t.entity_id = e_row.id
-                  AND t.attribute_id IN (" quoted-ids "
-                )
-          );
-                                                                                    ;
-               END;
+      
+     RETURNS SETOF attribute_with_unknown_value_type AS $$
+        BEGIN
+        RETURN QUERY
+       SELECT q1 as entity_value, q2.type as type, q2.value as value
+FROM (
+    SELECT e AS entity_value 
+    FROM public.entities e 
+    WHERE e.id IN (
+        SELECT t.value_id
+        FROM public.triples t
+        WHERE t.entity_id = e_row.id
+        AND t.attribute_id IN ("quoted-ids")
+    )
+) AS q1,
+(
+    SELECT t.value_type AS type, t.string_value AS value
+    FROM public.triples t
+    WHERE t.entity_id = e_row.id
+    AND t.attribute_id IN ("quoted-ids")
+) AS q2;
+
+        END;
                $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 
@@ -296,19 +300,21 @@ CREATE TYPE attribute_with_no_value_type AS (
   (let [value-types (map #(classify-attribute-value-type (:entities/attribute_value_type_id %)) entities)
         attribute-ids (map #(str (:entities/id %)) entities)
         all-relations? (every? #(= "relation" %) value-types)
-        all-nil? (every? nil? value-types)]
+        all-scalar? (every? #(= "scalar" %) value-types)] 
 
-    (println value-types)
+    
+    (println name value-types)
 
     (cond
       all-relations?
       (entity->attribute-relation-fn name attribute-ids)
 
-      all-nil?
-      (entity->attribute-no-value-fn name attribute-ids)
+      all-scalar?
+      (entity->attribute-scalar-fn name attribute-ids)
 
       :else
-      (entity->attribute-scalar-fn name attribute-ids))))
+      (entity->attribute-unknown-value-fn name attribute-ids))))
+
 
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
@@ -343,6 +349,6 @@ END $$;
     (doseq [[name entities] attribute-entities]
       (when (and (not (nil? name)) (not (= "" name)))
         (try-execute-raw-sql (entities->attribute-fn name entities)))
-        (try-execute-raw-sql (entity-name->attribute-count name)))))
+      (try-execute-raw-sql (entity-name->attribute-count name)))))
     
   

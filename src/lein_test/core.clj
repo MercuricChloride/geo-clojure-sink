@@ -254,7 +254,8 @@
           (update-entity (:entity_id triple) :is_attribute (if is-delete-triple nil (boolean (:value_id triple)))))))))
 
 (defn populate-db [type log-entry]
-  (cond (= type :entities) (populate-entities log-entry)
+  (cond 
+    (= type :entities) (populate-entities log-entry)
         (= type :triples) (populate-triples log-entry)
         (= type :accounts) (populate-account log-entry)
         (= type :spaces) (populate-spaces log-entry)
