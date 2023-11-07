@@ -1,18 +1,16 @@
 (ns lein-test.core
   (:gen-class)
-  (:require
-   [cheshire.core :as ch]
-   [lein-test.constants :refer [ENTITIES]]
-   [clojure.string :as cstr]
-   [clojure.java.io :as io]
-   [lein-test.spec.action :as action]
-   [honey.sql :as sql]
-   [honey.sql.helpers :as h]
-   [next.jdbc :as jdbc]
-   [lein-test.substreams :as substreams]
-   [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
-   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas get-cursor]]
-   [geo.clojure.sink :as geo]))
+  (:require [cheshire.core :as ch]
+            [clojure.java.io :as io]
+            [clojure.string :as cstr]
+            [geo.clojure.sink :as geo]
+            [honey.sql :as sql]
+            [honey.sql.helpers :as h]
+            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
+            [lein-test.db-helpers :refer [try-execute]]
+            [lein-test.spec.action :as action]
+            [lein-test.substreams :as substreams]
+            [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
 
 (defn- validate-actions
@@ -209,6 +207,50 @@
       (h/on-conflict :id (h/do-nothing))
       (sql/format)
       try-execute))
+
+(defn update-entity
+  "Updates a specific entity in the table."
+  [entityId column value]
+  (try-execute (-> (h/update :public/entities)
+                   (h/set {column value})
+                   (h/where [:= :id entityId])
+                   (sql/format {:pretty true}))))
+
+(defn populate-columns
+  "Takes actions as arguments, processes them to find blessed columns to update and updates them."
+  [actions]
+  (let [name-attr-id (:id (:name ATTRIBUTES))
+        description-attr-id (:id (:description ATTRIBUTES))
+        value-type-attr-id (:id (:value-type ATTRIBUTES))
+        type (:id (:type ATTRIBUTES))
+        attribute (:id (:attribute ENTITIES))
+        schema-type (:id (:schema-type ENTITIES))]
+    (doseq [action actions]
+      (let [triple (->triple action)
+            is-name-update (and (= (:attribute_id triple) name-attr-id)
+                                (= (:value_type triple) "string"))
+            is-description-update (and (= (:attribute_id triple) description-attr-id)
+                                       (= (:value_type triple) "string"))
+            is-value-type-update (and (= (:attribute_id triple) value-type-attr-id)
+                                      (= (:value_type triple) "entity"))
+            is-type-flag-update (and (= (:attribute_id triple) type)
+                                     (= (:value_id triple) schema-type))
+            is-attribute-flag-update (and (= (:attribute_id triple) type)
+                                          (= (:value_id triple) attribute))
+            action-type (:type action)
+            is-delete-triple (= action-type "deleteTriple")]
+
+        ;; TODO: Add Space and Account Updates
+        (when is-name-update
+          (update-entity (:entity_id triple) :name (if is-delete-triple nil (:string_value triple))))
+        (when is-description-update
+          (update-entity (:entity_id triple) :description (if is-delete-triple nil (:string_value triple))))
+        (when is-value-type-update
+          (update-entity (:entity_id triple) :attribute_value_type_id (if is-delete-triple nil (:value_id triple))))
+        (when is-type-flag-update
+          (update-entity (:entity_id triple) :is_type (if is-delete-triple nil (boolean (:value_id triple)))))
+        (when is-attribute-flag-update
+          (update-entity (:entity_id triple) :is_attribute (if is-delete-triple nil (boolean (:value_id triple)))))))))
 
 (defn entry->proposal
   [log-entry]
