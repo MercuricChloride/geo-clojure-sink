@@ -207,15 +207,22 @@ CREATE TYPE attribute_with_scalar_value_type AS (
    DROP TYPE IF EXISTS attribute_with_relation_value_type CASCADE;
 CREATE TYPE attribute_with_relation_value_type AS (
     type text, 
-    entity_value public.entities 
+    entity_value_id text 
 );
+   
+   comment on type attribute_with_relation_value_type is
+  E'@foreignKey (entity_value_id) references entities (id)';
 
    DROP TYPE IF EXISTS attribute_with_unknown_value_type CASCADE;
-CREATE TYPE attribute_with_unknown_value_type AS (
-
-    value text
-    
+   CREATE TYPE attribute_with_unknown_value_type AS (
+   type text,
+  value text,
+   entity_value_id text 
+   
 );
+   
+    comment on type attribute_with_unknown_value_type is
+  E'@foreignKey (entity_value_id) references entities (id)';
  ")
 
 
@@ -236,14 +243,11 @@ CREATE TYPE attribute_with_unknown_value_type AS (
         RETURNS SETOF attribute_with_relation_value_type AS $$
         BEGIN
           RETURN QUERY
-          SELECT 'entity' AS type, e AS entity_value
-          FROM public.entities e
-          WHERE e.id IN (
-              SELECT t.value_id
-              FROM triples t
-              WHERE t.entity_id = e_row.id
-              AND t.attribute_id IN (" quoted-ids ")
-          );
+          SELECT t.value_type AS type, t.entity_id AS entity_value_id
+          FROM public.triples t
+          WHERE t.entity_id = e_row.id
+          AND t.attribute_id IN (" quoted-ids ")
+          AND t.value_type IS NOT NULL;
         END;
         $$ LANGUAGE plpgsql STRICT STABLE;")))
 
@@ -271,31 +275,17 @@ CREATE TYPE attribute_with_unknown_value_type AS (
     (str "
       DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
         
-        CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
-      
-     RETURNS SETOF attribute_with_unknown_value_type AS $$
-        BEGIN
-        RETURN QUERY
-       SELECT q2.value as value
-FROM (
-    SELECT e AS entity_value 
-    FROM public.entities e 
-    WHERE e.id IN (
-        SELECT t.value_id
-        FROM public.triples t
-        WHERE t.entity_id = e_row.id
-        AND t.attribute_id IN ("quoted-ids")
-    )
-) AS q1,
-(
-    SELECT t.value_type AS type, t.string_value AS value
-    FROM public.triples t
-    WHERE t.entity_id = e_row.id
-    AND t.attribute_id IN ("quoted-ids")
-) AS q2;
-
-        END;
-               $$ LANGUAGE plpgsql STRICT STABLE;")))
+      CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
+      RETURNS SETOF attribute_with_unknown_value_type AS $$
+      BEGIN
+          RETURN QUERY
+          SELECT t.value_type AS type, t.string_value AS value, t.entity_id AS entity_value_id
+          FROM public.triples t
+          WHERE t.entity_id = e_row.id
+          AND t.attribute_id IN (" quoted-ids ")
+          AND t.value_type IS NOT NULL;
+      END; 
+      $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 
 (defn entity-name->attribute-count
