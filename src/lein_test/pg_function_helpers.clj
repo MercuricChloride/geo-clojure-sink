@@ -159,12 +159,13 @@
 
 
 (defn parse-pg-fn-name [type-name]
-  (when (and (string? type-name) (not (empty? type-name)))
+  (if (and (string? type-name) (not (empty? type-name)))
     (-> type-name
+        s/trim
         s/lower-case
         (s/replace " " "_")
-        (s/replace #"[^a-z_]" "")
-        (s/trim))))
+        (s/replace #"[^a-z_]" ""))
+    ""))
 
 
 (defn fn-parsed-attribute-values
@@ -333,10 +334,11 @@ END $$;
   (try-execute-raw-sql (fn-entities-schema))
   (try-execute-raw-sql (fn-parsed-attribute-values))
   (let [attribute-entities (->> (get-all-attribute-entities)
-                                (group-by :entities/name)
-                                (map (fn [[_ entities]] (first entities))))]
+                                (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
+                                (map (fn [[name entities]] [name (first entities)]))
+                                (into {}))]
     (println (json/write-str attribute-entities))
-    (doseq [entity attribute-entities]
+    (doseq [[_ entity] attribute-entities]
       (when (parse-pg-fn-name (:entities/name entity))
         (let [fn-wrapper (entity->attribute-fn-wrapper entity)]
           (when fn-wrapper
