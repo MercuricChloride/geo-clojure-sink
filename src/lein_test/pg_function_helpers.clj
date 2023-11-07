@@ -3,7 +3,7 @@
             [honey.sql :as sql]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [get-all-attribute-entities
-                                          try-execute]]))
+                                          get-all-type-entities try-execute]]))
 
 (def type-id (str (:id (:type ATTRIBUTES))))
 (def attribute-id (str (:id (:attribute ATTRIBUTES))))
@@ -160,9 +160,9 @@
   [type-name type-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") type-ids))]
     (str "
-        DROP FUNCTION IF EXISTS public.entities_" type-name "();
+        DROP FUNCTION IF EXISTS " type-name "_type();
         
-        CREATE FUNCTION public.entities_" type-name "()
+        CREATE FUNCTION " type-name "_type()
         RETURNS SETOF public.entities AS $$
         BEGIN
           RETURN QUERY
@@ -207,15 +207,22 @@ CREATE TYPE attribute_with_scalar_value_type AS (
    DROP TYPE IF EXISTS attribute_with_relation_value_type CASCADE;
 CREATE TYPE attribute_with_relation_value_type AS (
     type text, 
-    entity_value public.entities 
+    entity_value_id text 
 );
+   
+   comment on type attribute_with_relation_value_type is
+  E'@foreignKey (entity_value_id) references entities (id)';
 
    DROP TYPE IF EXISTS attribute_with_unknown_value_type CASCADE;
-CREATE TYPE attribute_with_unknown_value_type AS (
-
-    value text
-    
+   CREATE TYPE attribute_with_unknown_value_type AS (
+   type text,
+  value text,
+   entity_value_id text 
+   
 );
+   
+    comment on type attribute_with_unknown_value_type is
+  E'@foreignKey (entity_value_id) references entities (id)';
  ")
 
 
@@ -236,14 +243,11 @@ CREATE TYPE attribute_with_unknown_value_type AS (
         RETURNS SETOF attribute_with_relation_value_type AS $$
         BEGIN
           RETURN QUERY
-          SELECT 'entity' AS type, e AS entity_value
-          FROM public.entities e
-          WHERE e.id IN (
-              SELECT t.value_id
-              FROM triples t
-              WHERE t.entity_id = e_row.id
-              AND t.attribute_id IN (" quoted-ids ")
-          );
+          SELECT t.value_type AS type, t.entity_id AS entity_value_id
+          FROM public.triples t
+          WHERE t.entity_id = e_row.id
+          AND t.attribute_id IN (" quoted-ids ")
+          AND t.value_type IS NOT NULL;
         END;
         $$ LANGUAGE plpgsql STRICT STABLE;")))
 
@@ -271,31 +275,17 @@ CREATE TYPE attribute_with_unknown_value_type AS (
     (str "
       DROP FUNCTION IF EXISTS public.entities_" attribute-name "(e_row public.entities);
         
-        CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
-      
-     RETURNS SETOF attribute_with_unknown_value_type AS $$
-        BEGIN
-        RETURN QUERY
-       SELECT q2.value as value
-FROM (
-    SELECT e AS entity_value 
-    FROM public.entities e 
-    WHERE e.id IN (
-        SELECT t.value_id
-        FROM public.triples t
-        WHERE t.entity_id = e_row.id
-        AND t.attribute_id IN ("quoted-ids")
-    )
-) AS q1,
-(
-    SELECT t.value_type AS type, t.string_value AS value
-    FROM public.triples t
-    WHERE t.entity_id = e_row.id
-    AND t.attribute_id IN ("quoted-ids")
-) AS q2;
-
-        END;
-               $$ LANGUAGE plpgsql STRICT STABLE;")))
+      CREATE FUNCTION public.entities_" attribute-name "(e_row public.entities)
+      RETURNS SETOF attribute_with_unknown_value_type AS $$
+      BEGIN
+          RETURN QUERY
+          SELECT t.value_type AS type, t.string_value AS value, t.entity_id AS entity_value_id
+          FROM public.triples t
+          WHERE t.entity_id = e_row.id
+          AND t.attribute_id IN (" quoted-ids ")
+          AND t.value_type IS NOT NULL;
+      END; 
+      $$ LANGUAGE plpgsql STRICT STABLE;")))
 
 
 (defn entity-name->attribute-count
@@ -341,29 +331,27 @@ FROM (
   (try-execute (sql/format [:raw raw-sql])))
 
 
-(defn drop-pg-functions+types
-  []
-  "
-   DO $$ DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT proname FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')) LOOP
-        EXECUTE 'DROP FUNCTION IF EXISTS ' || r.proname || ' CASCADE';
-    END LOOP;
-END $$;
-   ")
+
 
 
 (defn populate-pg-functions
   "Prepares some type and schema GraphQL queries for Postgraphile"
   []
-  (try-execute-raw-sql (drop-pg-functions+types))
   (try-execute-raw-sql (fn-entities-types))
   (try-execute-raw-sql (fn-entities-type-count))
   (try-execute-raw-sql (fn-entities-attributes))
   (try-execute-raw-sql (fn-entities-attribute-count))
   (try-execute-raw-sql (fn-entities-schema))
   (try-execute-raw-sql (fn-parsed-attribute-values))
+
+  (let [type-entities (->> (get-all-type-entities)
+                                (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
+                                (into {}))]
+    (doseq [[name entities] type-entities]
+      (when (and (not (nil? name)) (not (= "" name)))
+        (try-execute-raw-sql (entity->type-fn name (map :entities/id entities))))
+      ))
+
   (let [attribute-entities (->> (get-all-attribute-entities)
                                 (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
                                 (into {}))]
