@@ -185,14 +185,14 @@ CREATE TYPE attribute_with_scalar_value_type AS (
    DROP TYPE IF EXISTS attribute_with_relation_value_type CASCADE;
 CREATE TYPE attribute_with_relation_value_type AS (
     type text, 
-    entityValue public.entities 
+    entity_value public.entities 
 );
 
    DROP TYPE IF EXISTS attribute_with_no_value_type CASCADE;
 CREATE TYPE attribute_with_no_value_type AS (
     type text,
     value text,
-    entityValue public.entities 
+    entity_value public.entities 
 );
  ")
 
@@ -214,7 +214,7 @@ CREATE TYPE attribute_with_no_value_type AS (
         RETURNS SETOF attribute_with_relation_value_type AS $$
         BEGIN
           RETURN QUERY
-          SELECT 'entity' AS type, e AS entityValue
+          SELECT 'entity' AS type, e AS entity_value
           FROM public.entities e
           WHERE e.id IN (
               SELECT t.value_id
@@ -259,7 +259,7 @@ CREATE TYPE attribute_with_no_value_type AS (
                  AND t.attribute_id IN (" quoted-ids ")
                  AND t.value_type IS NOT NULL
                                                                                     
-                e AS entityValue
+                e AS entity_value
                 FROM public.entities e
                 WHERE e.id IN (
                   SELECT t.value_id
@@ -295,8 +295,10 @@ CREATE TYPE attribute_with_no_value_type AS (
 (defn entity->attribute-fn-wrapper
   [entity]
   (let [attribute-name (parse-pg-fn-name (:entities/name entity))
-        value-type (classify-attribute-value-type (:entities/value_type entity))
+        value-type (classify-attribute-value-type (:entities/attribute_value_type_id entity))
         attribute-ids (map str [(:entities/id entity)])]
+
+    (println value-type)
 
     (cond
       (= value-type "relation")
