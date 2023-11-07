@@ -259,6 +259,9 @@
   "I DO SOMETHING NOW!"
   [& args]
   (let [start 36472424
-        stop (+ 10000 start)]
-    (substreams/start-stream substreams/client start stop)
-    (println "sadflkjsadflkjasflkj")))
+        stop 48000000]
+    (swap! substreams/current-block (fn [_] start))
+    (while (< @substreams/current-block stop)
+      (println "Starting stream at block #" @substreams/current-block)
+      (let [client (substreams/spawn-client)]
+        (substreams/start-stream client start stop)))))
