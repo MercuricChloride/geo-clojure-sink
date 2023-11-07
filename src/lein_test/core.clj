@@ -294,7 +294,7 @@
   [& args]
   (handle-args args)
 
-  (while (< (Integer/parseInt @substreams/current-block) stop-block)
+  (while true
     (println "Starting stream at block #" (str @substreams/current-block))
     (let [client (substreams/spawn-client)]
       (substreams/start-stream client start-block stop-block))))
