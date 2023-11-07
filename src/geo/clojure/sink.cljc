@@ -26,6 +26,54 @@
 (declare cis->EntriesAdded)
 (declare ecis->EntriesAdded)
 (declare new-EntriesAdded)
+(declare cis->RoleGranted)
+(declare ecis->RoleGranted)
+(declare new-RoleGranted)
+(declare cis->RolesGranted)
+(declare ecis->RolesGranted)
+(declare new-RolesGranted)
+(declare cis->RoleRevoked)
+(declare ecis->RoleRevoked)
+(declare new-RoleRevoked)
+(declare cis->RolesRevoked)
+(declare ecis->RolesRevoked)
+(declare new-RolesRevoked)
+(declare cis->GeoOutput)
+(declare ecis->GeoOutput)
+(declare new-GeoOutput)
+
+;;----------------------------------------------------------------------------------
+;;----------------------------------------------------------------------------------
+;; Enumerations
+;;----------------------------------------------------------------------------------
+;;----------------------------------------------------------------------------------
+
+;-----------------------------------------------------------------------------
+; Role
+;-----------------------------------------------------------------------------
+(def Role-default :null)
+
+(def Role-val2label {
+  0 :null
+  1 :moderator
+  2 :member
+  3 :admin})
+
+(def Role-label2val (set/map-invert Role-val2label))
+
+(defn cis->Role [is]
+  (let [val (serdes.core/cis->Enum is)]
+    (get Role-val2label val val)))
+
+(defn- get-Role [value]
+  {:pre [(or (int? value) (contains? Role-label2val value))]}
+  (get Role-label2val value value))
+
+(defn write-Role
+  ([tag value os] (write-Role tag {:optimize false} value os))
+  ([tag options value os]
+   (serdes.core/write-Enum tag options (get-Role value) os)))
+
 
 
 ;;----------------------------------------------------------------------------------
@@ -141,4 +189,274 @@
   (cis->EntriesAdded (serdes.stream/new-cis input)))
 
 (def ^:protojure.protobuf.any/record EntriesAdded-meta {:type "geo.clojure.sink.EntriesAdded" :decoder pb->EntriesAdded})
+
+;-----------------------------------------------------------------------------
+; RoleGranted
+;-----------------------------------------------------------------------------
+(defrecord RoleGranted-record [id role account sender space]
+  pb/Writer
+  (serialize [this os]
+    (serdes.core/write-String 1  {:optimize true} (:id this) os)
+    (write-Role 2  {:optimize true} (:role this) os)
+    (serdes.core/write-String 3  {:optimize true} (:account this) os)
+    (serdes.core/write-String 4  {:optimize true} (:sender this) os)
+    (serdes.core/write-String 5  {:optimize true} (:space this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "geo.clojure.sink.RoleGranted"))
+
+(s/def :geo.clojure.sink.RoleGranted/id string?)
+(s/def :geo.clojure.sink.RoleGranted/role (s/or :keyword keyword? :int int?))
+(s/def :geo.clojure.sink.RoleGranted/account string?)
+(s/def :geo.clojure.sink.RoleGranted/sender string?)
+(s/def :geo.clojure.sink.RoleGranted/space string?)
+(s/def ::RoleGranted-spec (s/keys :opt-un [:geo.clojure.sink.RoleGranted/id :geo.clojure.sink.RoleGranted/role :geo.clojure.sink.RoleGranted/account :geo.clojure.sink.RoleGranted/sender :geo.clojure.sink.RoleGranted/space ]))
+(def RoleGranted-defaults {:id "" :role Role-default :account "" :sender "" :space "" })
+
+(defn cis->RoleGranted
+  "CodedInputStream to RoleGranted"
+  [is]
+  (->> (tag-map RoleGranted-defaults
+         (fn [tag index]
+             (case index
+               1 [:id (serdes.core/cis->String is)]
+               2 [:role (cis->Role is)]
+               3 [:account (serdes.core/cis->String is)]
+               4 [:sender (serdes.core/cis->String is)]
+               5 [:space (serdes.core/cis->String is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->RoleGranted-record)))
+
+(defn ecis->RoleGranted
+  "Embedded CodedInputStream to RoleGranted"
+  [is]
+  (serdes.core/cis->embedded cis->RoleGranted is))
+
+(defn new-RoleGranted
+  "Creates a new instance from a map, similar to map->RoleGranted except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::RoleGranted-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::RoleGranted-spec init))))]}
+  (-> (merge RoleGranted-defaults init)
+      (map->RoleGranted-record)))
+
+(defn pb->RoleGranted
+  "Protobuf to RoleGranted"
+  [input]
+  (cis->RoleGranted (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record RoleGranted-meta {:type "geo.clojure.sink.RoleGranted" :decoder pb->RoleGranted})
+
+;-----------------------------------------------------------------------------
+; RolesGranted
+;-----------------------------------------------------------------------------
+(defrecord RolesGranted-record [roles]
+  pb/Writer
+  (serialize [this os]
+    (serdes.complex/write-repeated serdes.core/write-embedded 1 (:roles this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "geo.clojure.sink.RolesGranted"))
+
+(s/def ::RolesGranted-spec (s/keys :opt-un []))
+(def RolesGranted-defaults {:roles [] })
+
+(defn cis->RolesGranted
+  "CodedInputStream to RolesGranted"
+  [is]
+  (->> (tag-map RolesGranted-defaults
+         (fn [tag index]
+             (case index
+               1 [:roles (serdes.complex/cis->repeated ecis->RoleGranted is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->RolesGranted-record)))
+
+(defn ecis->RolesGranted
+  "Embedded CodedInputStream to RolesGranted"
+  [is]
+  (serdes.core/cis->embedded cis->RolesGranted is))
+
+(defn new-RolesGranted
+  "Creates a new instance from a map, similar to map->RolesGranted except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::RolesGranted-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::RolesGranted-spec init))))]}
+  (-> (merge RolesGranted-defaults init)
+      (cond-> (some? (get init :roles)) (update :roles #(map new-RoleGranted %)))
+      (map->RolesGranted-record)))
+
+(defn pb->RolesGranted
+  "Protobuf to RolesGranted"
+  [input]
+  (cis->RolesGranted (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record RolesGranted-meta {:type "geo.clojure.sink.RolesGranted" :decoder pb->RolesGranted})
+
+;-----------------------------------------------------------------------------
+; RoleRevoked
+;-----------------------------------------------------------------------------
+(defrecord RoleRevoked-record [id role account sender space]
+  pb/Writer
+  (serialize [this os]
+    (serdes.core/write-String 1  {:optimize true} (:id this) os)
+    (write-Role 2  {:optimize true} (:role this) os)
+    (serdes.core/write-String 3  {:optimize true} (:account this) os)
+    (serdes.core/write-String 4  {:optimize true} (:sender this) os)
+    (serdes.core/write-String 5  {:optimize true} (:space this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "geo.clojure.sink.RoleRevoked"))
+
+(s/def :geo.clojure.sink.RoleRevoked/id string?)
+(s/def :geo.clojure.sink.RoleRevoked/role (s/or :keyword keyword? :int int?))
+(s/def :geo.clojure.sink.RoleRevoked/account string?)
+(s/def :geo.clojure.sink.RoleRevoked/sender string?)
+(s/def :geo.clojure.sink.RoleRevoked/space string?)
+(s/def ::RoleRevoked-spec (s/keys :opt-un [:geo.clojure.sink.RoleRevoked/id :geo.clojure.sink.RoleRevoked/role :geo.clojure.sink.RoleRevoked/account :geo.clojure.sink.RoleRevoked/sender :geo.clojure.sink.RoleRevoked/space ]))
+(def RoleRevoked-defaults {:id "" :role Role-default :account "" :sender "" :space "" })
+
+(defn cis->RoleRevoked
+  "CodedInputStream to RoleRevoked"
+  [is]
+  (->> (tag-map RoleRevoked-defaults
+         (fn [tag index]
+             (case index
+               1 [:id (serdes.core/cis->String is)]
+               2 [:role (cis->Role is)]
+               3 [:account (serdes.core/cis->String is)]
+               4 [:sender (serdes.core/cis->String is)]
+               5 [:space (serdes.core/cis->String is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->RoleRevoked-record)))
+
+(defn ecis->RoleRevoked
+  "Embedded CodedInputStream to RoleRevoked"
+  [is]
+  (serdes.core/cis->embedded cis->RoleRevoked is))
+
+(defn new-RoleRevoked
+  "Creates a new instance from a map, similar to map->RoleRevoked except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::RoleRevoked-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::RoleRevoked-spec init))))]}
+  (-> (merge RoleRevoked-defaults init)
+      (map->RoleRevoked-record)))
+
+(defn pb->RoleRevoked
+  "Protobuf to RoleRevoked"
+  [input]
+  (cis->RoleRevoked (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record RoleRevoked-meta {:type "geo.clojure.sink.RoleRevoked" :decoder pb->RoleRevoked})
+
+;-----------------------------------------------------------------------------
+; RolesRevoked
+;-----------------------------------------------------------------------------
+(defrecord RolesRevoked-record [roles]
+  pb/Writer
+  (serialize [this os]
+    (serdes.complex/write-repeated serdes.core/write-embedded 1 (:roles this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "geo.clojure.sink.RolesRevoked"))
+
+(s/def ::RolesRevoked-spec (s/keys :opt-un []))
+(def RolesRevoked-defaults {:roles [] })
+
+(defn cis->RolesRevoked
+  "CodedInputStream to RolesRevoked"
+  [is]
+  (->> (tag-map RolesRevoked-defaults
+         (fn [tag index]
+             (case index
+               1 [:roles (serdes.complex/cis->repeated ecis->RoleRevoked is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->RolesRevoked-record)))
+
+(defn ecis->RolesRevoked
+  "Embedded CodedInputStream to RolesRevoked"
+  [is]
+  (serdes.core/cis->embedded cis->RolesRevoked is))
+
+(defn new-RolesRevoked
+  "Creates a new instance from a map, similar to map->RolesRevoked except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::RolesRevoked-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::RolesRevoked-spec init))))]}
+  (-> (merge RolesRevoked-defaults init)
+      (cond-> (some? (get init :roles)) (update :roles #(map new-RoleRevoked %)))
+      (map->RolesRevoked-record)))
+
+(defn pb->RolesRevoked
+  "Protobuf to RolesRevoked"
+  [input]
+  (cis->RolesRevoked (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record RolesRevoked-meta {:type "geo.clojure.sink.RolesRevoked" :decoder pb->RolesRevoked})
+
+;-----------------------------------------------------------------------------
+; GeoOutput
+;-----------------------------------------------------------------------------
+(defrecord GeoOutput-record [entries roles-granted roles-revoked]
+  pb/Writer
+  (serialize [this os]
+    (serdes.complex/write-repeated serdes.core/write-embedded 1 (:entries this) os)
+    (serdes.complex/write-repeated serdes.core/write-embedded 2 (:roles-granted this) os)
+    (serdes.complex/write-repeated serdes.core/write-embedded 3 (:roles-revoked this) os))
+  pb/TypeReflection
+  (gettype [this]
+    "geo.clojure.sink.GeoOutput"))
+
+(s/def ::GeoOutput-spec (s/keys :opt-un []))
+(def GeoOutput-defaults {:entries [] :roles-granted [] :roles-revoked [] })
+
+(defn cis->GeoOutput
+  "CodedInputStream to GeoOutput"
+  [is]
+  (->> (tag-map GeoOutput-defaults
+         (fn [tag index]
+             (case index
+               1 [:entries (serdes.complex/cis->repeated ecis->EntryAdded is)]
+               2 [:roles-granted (serdes.complex/cis->repeated ecis->RoleGranted is)]
+               3 [:roles-revoked (serdes.complex/cis->repeated ecis->RoleRevoked is)]
+
+               [index (serdes.core/cis->undefined tag is)]))
+         is)
+        (map->GeoOutput-record)))
+
+(defn ecis->GeoOutput
+  "Embedded CodedInputStream to GeoOutput"
+  [is]
+  (serdes.core/cis->embedded cis->GeoOutput is))
+
+(defn new-GeoOutput
+  "Creates a new instance from a map, similar to map->GeoOutput except that
+  it properly accounts for nested messages, when applicable.
+  "
+  [init]
+  {:pre [(if (s/valid? ::GeoOutput-spec init) true (throw (ex-info "Invalid input" (s/explain-data ::GeoOutput-spec init))))]}
+  (-> (merge GeoOutput-defaults init)
+      (cond-> (some? (get init :entries)) (update :entries #(map new-EntryAdded %)))
+      (cond-> (some? (get init :roles-granted)) (update :roles-granted #(map new-RoleGranted %)))
+      (cond-> (some? (get init :roles-revoked)) (update :roles-revoked #(map new-RoleRevoked %)))
+      (map->GeoOutput-record)))
+
+(defn pb->GeoOutput
+  "Protobuf to GeoOutput"
+  [input]
+  (cis->GeoOutput (serdes.stream/new-cis input)))
+
+(def ^:protojure.protobuf.any/record GeoOutput-meta {:type "geo.clojure.sink.GeoOutput" :decoder pb->GeoOutput})
 
