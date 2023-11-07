@@ -293,15 +293,6 @@
           (sql/format)
           try-execute))))
 
-;; (->> files
-;;     (map entry->author)
-;;     (into #{})
-;;     (into [])
-;;     (filter #(not (nil? %)))
-;;     populate-accounts)
-
-;(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))
-
 (defn populate-db [type log-entry]
   (cond (= type :entities) (populate-entities log-entry)
         (= type :triples) (populate-triples log-entry)
