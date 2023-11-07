@@ -11,7 +11,7 @@
    [next.jdbc :as jdbc]
    [lein-test.substreams :as substreams]
    [lein-test.tables :refer [->action ->triple ->entity ->entity-type ->entity-attribute ->spaces]]
-   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas]]
+   [lein-test.db-helpers :refer [nuke-db bootstrap-db try-execute create-type-tables make-space-schemas get-cursor]]
    [geo.clojure.sink :as geo]))
 
 
@@ -37,7 +37,6 @@
 
 (defn- extract-file-meta [filename]
   (let [parts (cstr/split filename #"_")]
-    (println parts)
     {:block (Integer/parseInt (get parts 0))
      :index (Integer/parseInt (get parts 1))
      :space (.toLowerCase (get parts 2))
@@ -46,7 +45,6 @@
 
 (defn sort-files [files]
   (sort-by (juxt :block :index) files))
-
 
 (def new-files (->> (io/file "./new-cache/entries-added/")
                     file-seq
@@ -260,10 +258,6 @@
 ;;     (filter #(not (nil? %)))
 ;;     populate-accounts)
 
-(defn ipfs-fetch
-  [cid]
-  (slurp (str "https://ipfs.network.thegraph.com/api/v0/cat?arg=" cid)))
-
 ;(ch/parse-string (ipfs-fetch "QmYxqYRTxGT2VywaH5P9B6gBHs4ZMUKwEtR7tdQFTAonQY"))
 
 (defn populate-db [type log-entry]
@@ -274,13 +268,33 @@
         (= type :proposals) (populate-proposals-from-entry log-entry)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
+(def start-block 36472424)
+(def stop-block 48000000)
+
+(defn handle-args
+  [args]
+  (let [args (into #{} args)
+        from-genesis (get args "--from-genesis")
+        populate-cache (get args "--populate-cache")
+        from-cache (get args "--from-cache")]
+    (when from-genesis
+      (println "from-genesis")
+      (swap! substreams/current-block (fn [_] (str start-block)))
+      (swap! substreams/cursor (fn [_] "")))
+    (when populate-cache
+      (println "populate-cache")
+      (swap! substreams/sink-mode (fn [_] :populate-cache)))
+    (when from-cache
+      (println "from-cache")
+      (swap! substreams/sink-mode (fn [_] :from-cache)))))
+
+
 (defn -main
   "I DO SOMETHING NOW!"
   [& args]
-  (let [start 36472424
-        stop 48000000]
-    (swap! substreams/current-block (fn [_] start))
-    (while (< @substreams/current-block stop)
-      (println "Starting stream at block #" @substreams/current-block)
-      (let [client (substreams/spawn-client)]
-        (substreams/start-stream client start stop)))))
+  (handle-args args)
+
+  (while true
+    (println "Starting stream at block #" (str @substreams/current-block))
+    (let [client (substreams/spawn-client)]
+      (substreams/start-stream client start-block stop-block))))
