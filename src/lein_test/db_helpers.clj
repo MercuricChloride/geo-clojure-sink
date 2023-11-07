@@ -80,6 +80,14 @@
                    (h/where [:and [:= :is_attribute true]])
                    (sql/format {:pretty true}))))
 
+(defn get-all-type-entities
+  "Gets all rows from :public/entities where is_attribute is true"
+  []
+  (try-execute (-> (h/select [:*])
+                   (h/from :public/entities)
+                   (h/where [:and [:= :is_type true]])
+                   (sql/format {:pretty true}))))
+
 (defn get-entity-name
   "Returns the name of the entity for a given entity-id"
   [entity-id]

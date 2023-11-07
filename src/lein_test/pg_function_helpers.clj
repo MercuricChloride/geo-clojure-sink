@@ -3,7 +3,7 @@
             [honey.sql :as sql]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [get-all-attribute-entities
-                                          try-execute]]))
+                                          get-all-type-entities try-execute]]))
 
 (def type-id (str (:id (:type ATTRIBUTES))))
 (def attribute-id (str (:id (:attribute ATTRIBUTES))))
@@ -160,9 +160,9 @@
   [type-name type-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") type-ids))]
     (str "
-        DROP FUNCTION IF EXISTS public.entities_" type-name "();
+        DROP FUNCTION IF EXISTS " type-name "_type();
         
-        CREATE FUNCTION public.entities_" type-name "()
+        CREATE FUNCTION " type-name "_type()
         RETURNS SETOF public.entities AS $$
         BEGIN
           RETURN QUERY
@@ -331,29 +331,27 @@ CREATE TYPE attribute_with_relation_value_type AS (
   (try-execute (sql/format [:raw raw-sql])))
 
 
-(defn drop-pg-functions+types
-  []
-  "
-   DO $$ DECLARE
-    r RECORD;
-BEGIN
-    FOR r IN (SELECT proname FROM pg_proc WHERE pronamespace = (SELECT oid FROM pg_namespace WHERE nspname = 'public')) LOOP
-        EXECUTE 'DROP FUNCTION IF EXISTS ' || r.proname || ' CASCADE';
-    END LOOP;
-END $$;
-   ")
+
 
 
 (defn populate-pg-functions
   "Prepares some type and schema GraphQL queries for Postgraphile"
   []
-  (try-execute-raw-sql (drop-pg-functions+types))
   (try-execute-raw-sql (fn-entities-types))
   (try-execute-raw-sql (fn-entities-type-count))
   (try-execute-raw-sql (fn-entities-attributes))
   (try-execute-raw-sql (fn-entities-attribute-count))
   (try-execute-raw-sql (fn-entities-schema))
   (try-execute-raw-sql (fn-parsed-attribute-values))
+
+  (let [type-entities (->> (get-all-type-entities)
+                                (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
+                                (into {}))]
+    (doseq [[name entities] type-entities]
+      (when (and (not (nil? name)) (not (= "" name)))
+        (try-execute-raw-sql (entity->type-fn name (map :entities/id entities))))
+      ))
+
   (let [attribute-entities (->> (get-all-attribute-entities)
                                 (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
                                 (into {}))]
