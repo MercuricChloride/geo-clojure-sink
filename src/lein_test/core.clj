@@ -307,6 +307,7 @@
         (= type :triples) (populate-triples log-entry)
         (= type :accounts) (populate-account log-entry)
         (= type :spaces) (populate-spaces log-entry)
+        (= type :columns) (populate-columns log-entry)
         (= type :proposals) (populate-proposals-from-entry log-entry)
         :else (throw (ex-info "Invalid type" {:type type}))))
 
@@ -332,7 +333,7 @@
 
 
 (defn -main
-  "I DO SOMETHING NOW!"
+  "The main enchilada that runs when you write lein run"
   [& args]
   (handle-args args)
 
