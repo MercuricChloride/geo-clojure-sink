@@ -77,7 +77,7 @@
   []
   (try-execute (-> (h/select [:*])
                    (h/from :public/entities)
-                   (h/where [:= :is_attribute true])
+                   (h/where [:and [:= :is_attribute true]])
                    (sql/format {:pretty true}))))
 
 (defn get-entity-name

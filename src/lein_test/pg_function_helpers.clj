@@ -156,6 +156,28 @@
     $$ LANGUAGE plpgsql STRICT STABLE;"))
 
 
+(defn entity->type-fn
+  [type-name type-ids]
+  (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") type-ids))]
+    (str "
+        DROP FUNCTION IF EXISTS public.entities_" type-name "();
+        
+        CREATE FUNCTION public.entities_" type-name "()
+        RETURNS SETOF public.entities AS $$
+        BEGIN
+          RETURN QUERY
+          SELECT *
+          FROM public.entities e
+          WHERE e.id IN (
+              SELECT t.entity_id
+              FROM triples t
+              WHERE t.attribute_id = " type-id "  
+              AND t.value_id IN (" quoted-ids ")
+          );
+        END;
+        $$ LANGUAGE plpgsql STRICT STABLE;")))
+
+
 (def protected-attribute-names
   ["name" "description" "entity_id" "is_type" "defined_in" "value_type_id" "version" "id"])
 
@@ -190,9 +212,8 @@ CREATE TYPE attribute_with_relation_value_type AS (
 
    DROP TYPE IF EXISTS attribute_with_unknown_value_type CASCADE;
 CREATE TYPE attribute_with_unknown_value_type AS (
-    type text,
-    value text,
-    entity_value public.entities 
+
+    value text
     
 );
  ")
@@ -255,7 +276,7 @@ CREATE TYPE attribute_with_unknown_value_type AS (
      RETURNS SETOF attribute_with_unknown_value_type AS $$
         BEGIN
         RETURN QUERY
-       SELECT q1 as entity_value, q2.type as type, q2.value as value
+       SELECT q2.value as value
 FROM (
     SELECT e AS entity_value 
     FROM public.entities e 

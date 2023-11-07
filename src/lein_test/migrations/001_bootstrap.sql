@@ -199,6 +199,9 @@ ALTER TABLE ONLY public.triples
     ADD CONSTRAINT triples_entity_entity_id_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
 
 ALTER TABLE ONLY public.triples
+    ADD CONSTRAINT triples_entity_value_id_fkey FOREIGN KEY (value_id) REFERENCES public.entities(id);    
+
+ALTER TABLE ONLY public.triples
     ADD CONSTRAINT triples_entity_value_entity_id_fkey FOREIGN KEY (entity_value) REFERENCES public.entities(id);
 ALTER TABLE ONLY public.versions
     ADD CONSTRAINT versions_to_entities_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
