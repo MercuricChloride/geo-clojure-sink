@@ -7,7 +7,8 @@
             [geo.clojure.sink :as geo]
             [lein-test.cache :refer [validate-actions]]
             [lein-test.db-helpers :refer [get-cursor update-cursor]]
-            [lein-test.populate :refer [actions->db]]
+            [lein-test.populate :refer [actions->db role-granted->db
+                                        role-revoked->db]]
             [lein-test.utils :refer [decode-base64 ipfs-fetch slurp-bytes
                                      write-file]]
             [protojure.grpc.client.providers.http2 :as grpc.http2]
@@ -93,33 +94,38 @@
     (doseq [entry roles-revoked]
       (when (not (= :null (:role entry)))
         (write-file (str revoked-path (:id entry)) (protojure/->pb entry))))))
-  
+
 (defmethod process-geo-data :populate-db
   [geo-output _]
-  (let [entries (:entries geo-output)]
-    (when (< 0 (count entries))
-     (doseq [entry entries]
-       (let [block-number (Integer/parseInt @current-block)
-             author (:author entry)
-             space (:space entry)
-             uri (:uri entry)
-             uri-data (->> uri
-                           uri-data)
-             actions (:actions (ch/parse-string uri-data true))
-             valid-actions (validate-actions space author block-number actions)]
-            (actions->db valid-actions))))))
+
+  (let [entries (:entries geo-output),
+        roles-granted (:roles-granted geo-output)
+        roles-revoked (:roles-revoked geo-output)]
+    (doseq [entry entries]
+      (let [block-number (Integer/parseInt @current-block)
+            author (:author entry)
+            space (:space entry)
+            uri (:uri entry)
+            uri-data (->> uri
+                          uri-data)
+            actions (:actions (ch/parse-string uri-data true))
+            valid-actions (validate-actions space author block-number actions)]
+        (actions->db valid-actions)))
+
+    (doseq [role roles-granted]
+      (when (not (= :null (:role role)))
+        (role-granted->db role)))
+
+    (doseq [role roles-revoked]
+      (when (not (= :null (:role role)))
+        (role-revoked->db role)))))
+
 
  ;;(actions->db (validate-actions (:actions))))))))
  ;; (let [entry-filename (format-entry-filename entry)
  ;;       entry-filename (str entry-path entry-filename)]
  ;;      (when (file-exists? entry-filename)
  ;;        (log-entry->db entry))
- ;;  (doseq [entry roles-granted]
- ;;    (when (not (= :null (:role entry)))
- ;;      (write-file (str granted-path (:id entry)) (protojure/->pb entry))))
- ;;  (doseq [entry roles-revoked]
- ;;    (when (not (= :null (:role entry)))
- ;;      (write-file (str revoked-path (:id entry)) (protojure/->pb entry)))))
 
 ;(geo/pb->RoleGranted (slurp-bytes "./new-cache/roles-granted/36472429-0xa8fe17eb738b8bbeb3f567ad0b3f426d1d8f74af053c3bd63c35e8193f0894aa-4"))
 
@@ -143,8 +149,7 @@
             (do
               (println "Got map output at block:" block-number)
               (process-geo-data geo-output :populate-cache)
-              (process-geo-data geo-output :populate-db)
-              ))
+              (process-geo-data geo-output :populate-db)))
           (swap! current-block (fn [_] (str block-number)))
           (swap! cursor (fn [_] stream-cursor)))))
     (catch Exception e
@@ -159,13 +164,13 @@
                                             :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
 (defn start-stream
   ([client]
-    (start-stream client 36472424 48000000))
+   (start-stream client 36472424 48000000))
   ([client start-block stop-block]
-    (let [channel (async/chan (async/buffer 10))]
+   (let [channel (async/chan (async/buffer 10))]
 
-      (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
-                                              :stop-block-num stop-block
-                                              :start-cursor @cursor
-                                              :modules (:modules spkg)
-                                              :output-module "geo_out"}) channel)
-      (take-all channel handle-block-scoped-data))))
+     (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
+                                             :stop-block-num stop-block
+                                             :start-cursor @cursor
+                                             :modules (:modules spkg)
+                                             :output-module "geo_out"}) channel)
+     (take-all channel handle-block-scoped-data))))

@@ -1,9 +1,9 @@
 (ns lein-test.populate
- (:require [honey.sql :as sql]
-           [honey.sql.helpers :as h]
-           [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
-           [lein-test.db-helpers :refer [try-execute]]
-           [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
+  (:require [honey.sql :as sql]
+            [honey.sql.helpers :as h]
+            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
+            [lein-test.db-helpers :refer [try-execute]]
+            [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
@@ -36,11 +36,11 @@
   [actions]
   (let [filtered (filter #(= (:attributeId %) "space") actions)]
     (when (< 0 (count filtered))
-        (-> (h/insert-into :public/spaces)
-            (h/values (into [] (map ->spaces filtered)))
-            (h/on-conflict :id (h/do-nothing))
-            (sql/format {:pretty true})
-            try-execute))))
+      (-> (h/insert-into :public/spaces)
+          (h/values (into [] (map ->spaces filtered)))
+          (h/on-conflict :id (h/do-nothing))
+          (sql/format {:pretty true})
+          try-execute))))
 
 ; TODO FIX THIS NAME
 (defn entry->actions
@@ -172,25 +172,24 @@
           try-execute))))
 
 (defn actions->db
- [actions]
- (println "populating entities")
- (populate-entities actions)
- (println "populating triples")
- (populate-triples actions)
- (println "populating accounts")
- (populate-account actions)
- (println "populating spaces")
- (populate-spaces actions)
- (println "populating columns")
- (populate-columns actions)
- (println "populating proposals")
- (populate-proposals actions))
+  [actions]
+  (println "populating entities")
+  (populate-entities actions)
+  (println "populating triples")
+  (populate-triples actions)
+  (println "populating accounts")
+  (populate-account actions)
+  (println "populating spaces")
+  (populate-spaces actions)
+  (println "populating columns")
+  (populate-columns actions)
+  (println "populating proposals")
+  (populate-proposals actions))
 
-(defn roles-granted->db [roles-granted]
- []
- "hi")
 
-(defn roles-revoked->db [roles-revoked]
- []
- "hi again")
+(defn role-granted->db [role]
+  (println  role))
+
+(defn role-revoked->db [role]
+  (println  role))
 

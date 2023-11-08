@@ -1,30 +1,14 @@
 (ns lein-test.core
   (:gen-class)
-  (:require [lein-test.cache :refer [cached-actions]]
-            [lein-test.populate :refer [actions->db]]
+  (:require [lein-test.cache :refer [cached-actions cached-roles-granted
+                                     cached-roles-revoked]]
+            [lein-test.populate :refer [actions->db role-granted->db
+                                        role-revoked->db]]
             [lein-test.substreams :as substreams]))
 
 (def start-block 36472424)
 (def stop-block 48000000)
 
-(defn handle-args
-  [args]
-  (let [args (into #{} args)
-        from-genesis (get args "--from-genesis")
-        populate-cache (get args "--populate-cache")
-        from-cache (get args "--from-cache")]
-    (when from-genesis
-      (println "from-genesis")
-      (swap! substreams/current-block (fn [_] (str start-block)))
-      (swap! substreams/cursor (fn [_] "")))
-    (when populate-cache
-      (println "populate-cache")
-      (swap! substreams/sink-mode (fn [_] :populate-cache)))
-    (when from-cache
-      (println "from-cache")
-      (doseq [actions cached-actions]
-        (actions->db actions))
-      (swap! substreams/sink-mode (fn [_] :from-cache)))))
 
 (defn -main
   "The main enchilada that runs when you write lein run"
@@ -41,7 +25,16 @@
     (when from-cache
       (println "from-cache")
       (doseq [actions cached-actions]
-        (actions->db actions)))
+        (actions->db actions))
+      
+      (doseq [roles cached-roles-granted]
+        (doseq [role roles]
+          (role-granted->db role)))
+
+      (doseq [roles cached-roles-revoked]
+        (doseq [role roles]
+          (role-revoked->db role))))
+
 
     (while (not from-cache)
       (println "from-stream block #" (str @substreams/current-block))
