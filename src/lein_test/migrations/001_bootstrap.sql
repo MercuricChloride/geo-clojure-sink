@@ -30,7 +30,6 @@ CREATE TABLE public.actions (
     version_id text
 );
 
-
 CREATE TABLE public.cursors (
     id integer NOT NULL,
     cursor text NOT NULL,
@@ -38,7 +37,6 @@ CREATE TABLE public.cursors (
 );
 
 COMMENT ON TABLE public.cursors IS '@name substreamCursor';
-
 
 CREATE TABLE public.entities (
     id text NOT NULL,
@@ -137,7 +135,6 @@ CREATE TABLE public.triples (
     entity_value text
 );
 
-
 CREATE TABLE public.versions (
     id text NOT NULL,
     name text,
@@ -154,6 +151,7 @@ ALTER TABLE ONLY public.accounts
 
 ALTER TABLE ONLY public.actions
     ADD CONSTRAINT actions_pkey PRIMARY KEY (id);
+
 ALTER TABLE ONLY public.cursors
     ADD CONSTRAINT cursors_pkey PRIMARY KEY (id);
 
@@ -229,6 +227,7 @@ ALTER TABLE ONLY public.triples
 
 ALTER TABLE ONLY public.triples
     ADD CONSTRAINT triples_entity_value_entity_id_fkey FOREIGN KEY (entity_value) REFERENCES public.entities(id);
+
 ALTER TABLE ONLY public.versions
     ADD CONSTRAINT versions_to_entities_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
 
@@ -241,8 +240,6 @@ ALTER TABLE public.space_editors
 ALTER TABLE public.space_editor_controllers
     ADD CONSTRAINT space_editor_controllers_space_to_address FOREIGN KEY (space) REFERENCES public.spaces(address);
 
-
-
 -- Disable All Triggers so we can play fast and loose with foreign keys
 ALTER TABLE public.accounts DISABLE TRIGGER ALL;
 ALTER TABLE public.actions DISABLE TRIGGER ALL;
@@ -252,6 +249,7 @@ ALTER TABLE public.proposals DISABLE TRIGGER ALL;
 ALTER TABLE public.proposed_versions DISABLE TRIGGER ALL;
 ALTER TABLE public.triples DISABLE TRIGGER ALL;
 ALTER TABLE public.subspaces DISABLE TRIGGER ALL;
+ALTER TABLE public.spaces DISABLE TRIGGER ALL;
 ALTER TABLE public.versions DISABLE TRIGGER ALL;
 ALTER TABLE public.space_admins DISABLE TRIGGER ALL;
 ALTER TABLE public.space_editors DISABLE TRIGGER ALL;

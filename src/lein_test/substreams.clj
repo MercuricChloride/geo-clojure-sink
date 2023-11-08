@@ -1,18 +1,18 @@
 (ns lein-test.substreams
   (:gen-class)
-  (:require [sf.substreams.rpc.v2 :as rpc]
-            [sf.substreams.rpc.v2.Stream.client :as stream]
+  (:require [clojure.core.async :as async]
+            [clojure.string :as string]
+            [dotenv :refer [env]]
+            [geo.clojure.sink :as geo]
+            [lein-test.cache :refer [cached-actions]]
+            [lein-test.db-helpers :refer [get-cursor update-cursor]]
+            [lein-test.populate :refer [actions->db]]
+            [lein-test.utils :refer [decode-base64 ipfs-fetch slurp-bytes
+                                     write-file]]
             [protojure.grpc.client.providers.http2 :as grpc.http2]
             [protojure.protobuf :as protojure]
-            [geo.clojure.sink :as geo]
-            [dotenv :refer [env app-env]]
-            [clojure.java.io :as io]
-            [clojure.core.async :as async]
-            [clojure.string :as string]
-            [lein-test.db-helpers :refer [update-cursor get-cursor]]
-            [lein-test.populate :refer [actions->db]]
-            [lein-test.cache :refer [cached-actions]]
-            [lein-test.utils :refer [slurp-bytes write-file decode-base64 ipfs-fetch]]
+            [sf.substreams.rpc.v2 :as rpc]
+            [sf.substreams.rpc.v2.Stream.client :as stream]
             [sf.substreams.v1 :as v1]))
 
 (def current-block (atom (:cursors/block_number (get-cursor))))
@@ -95,8 +95,8 @@
 
 (defmethod process-geo-data :from-cache
  [_]
- (doseq [entry cached-actions]
-  (actions->db entry)))
+ (doseq [action cached-actions]
+  (actions->db action)))
  ;; (let [entry-filename (format-entry-filename entry)
  ;;       entry-filename (str entry-path entry-filename)]
  ;;      (when (file-exists? entry-filename)

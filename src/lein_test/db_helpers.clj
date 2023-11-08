@@ -162,11 +162,15 @@
   (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/sql/nuke.sql")])))
 
 (defn bootstrap-db []
-  (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/migrations/001_bootstrap.sql")])))
+  (jdbc/execute! ds (sql/format [:raw (slurp "./src/lein_test/migrations/001_bootstrap.sql")]))) 
 
 (defn bootstrap-entities
   []
   ;; creates the entities
+  (jdbc/execute! ds (-> (h/insert-into :public/cursors)
+                        (h/values [{:id 0 :cursor "" :block-number 0}])
+                        (sql/format)))
+
   (jdbc/execute! ds (-> (h/insert-into :public/entities)
                         (h/values (into [] (map (fn [entity] (let [entity (second entity)]
                                                                {:id (:id entity)
@@ -233,4 +237,4 @@
  (bootstrap-db)
  (bootstrap-entities))
 
-;(reset-db)
+(reset-db)
