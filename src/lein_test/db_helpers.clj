@@ -161,7 +161,6 @@
 (defn nuke-db []
   (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/sql/nuke.sql")])))
 
-;; (nuke-db)
 (defn bootstrap-db []
   (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/migrations/001_bootstrap.sql")])))
 
@@ -218,9 +217,20 @@
                                                                 :defined_in ROOT-SPACE-ADDRESS
                                                                 :is_protected true
                                                                 :deleted false})) ATTRIBUTES)))
-                        sql/format)))
+                        sql/format))
 
-;(bootstrap-db)
-;(bootstrap-entities)
 
-;(nuke-db)
+  (-> (h/insert-into :public/spaces)
+      (h/values [{:id "root_space"
+                  :address ROOT-SPACE-ADDRESS
+                  :is-root-space true}])
+      (sql/format)
+      try-execute))
+
+(defn reset-db
+ []
+ (nuke-db)
+ (bootstrap-db)
+ (bootstrap-entities))
+
+(reset-db)

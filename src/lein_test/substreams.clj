@@ -12,9 +12,8 @@
             [lein-test.db-helpers :refer [update-cursor get-cursor]]
             [lein-test.populate :refer [log-entry->db]]
             [lein-test.cache :refer [cached-log-entries]]
-            [lein-test.utils :refer [slurp-bytes write-file]]
-            [sf.substreams.v1 :as v1])
-  (:import java.util.Base64))
+            [lein-test.utils :refer [slurp-bytes write-file decode-base64 ipfs-fetch]]
+            [sf.substreams.v1 :as v1]))
 
 
 (def current-block (atom (:cursors/block_number (get-cursor))))
@@ -52,26 +51,6 @@
        space (:space input)
        author (:author input)]
   (str block "_" index "_" space "_" author)))
-
-(defn ipfs-fetch
-  ([cid]
-   (when (not (nil? cid))
-     (slurp (str "https://ipfs.network.thegraph.com/api/v0/cat?arg=" cid))))
-  ([cid max-failures]
-   (ipfs-fetch cid 0 max-failures))
-  ([cid retry-count max-failures]
-   (when (= retry-count max-failures)
-    (throw (Exception. "Failed to fetch the cid from ipfs too many times")))
-   (try
-     (ipfs-fetch cid)
-     (catch java.io.IOException e
-       (println (str "Failed to fetch data! \n Sleeping for " (* 10 retry-count) "seconds"))
-       (Thread/sleep (* 10000 retry-count))
-       (ipfs-fetch cid (inc retry-count) max-failures)))))
-
-(defn decode-base64 [to-decode]
-  (String. (.decode (Base64/getDecoder) to-decode)))
-
 
 (defn uri-type
  [uri]

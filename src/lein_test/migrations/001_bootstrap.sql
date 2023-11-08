@@ -99,6 +99,23 @@ CREATE TABLE public.spaces (
 );
 
 
+CREATE TABLE public.space_admins (
+    space text NOT NULL,
+    account text NOT NULL
+);
+
+CREATE TABLE public.space_editors (
+    space text NOT NULL,
+    account text NOT NULL
+);
+
+
+CREATE TABLE public.space_editor_controllers (
+    space text NOT NULL,
+    account text NOT NULL
+);
+
+
 CREATE TABLE public.subspaces (
     id text NOT NULL,
     parent_space text NOT NULL,
@@ -155,6 +172,15 @@ ALTER TABLE ONLY public.proposed_versions
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_address_key UNIQUE (address);
 
+ALTER TABLE public.space_admins
+    ADD CONSTRAINT space_admins_unique_account_space_pair UNIQUE (account, space);
+
+ALTER TABLE public.space_editors
+    ADD CONSTRAINT space_editors_unique_account_space_pair UNIQUE (account, space);
+
+ALTER TABLE public.space_editor_controllers
+    ADD CONSTRAINT space_editor_controllers_unique_account_space_pair UNIQUE (account, space);
+
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_pkey PRIMARY KEY (id);
 
@@ -206,6 +232,15 @@ ALTER TABLE ONLY public.triples
 ALTER TABLE ONLY public.versions
     ADD CONSTRAINT versions_to_entities_fkey FOREIGN KEY (entity_id) REFERENCES public.entities(id);
 
+ALTER TABLE public.space_admins
+    ADD CONSTRAINT space_admins_space_to_address FOREIGN KEY (space) REFERENCES public.spaces(address);
+
+ALTER TABLE public.space_editors
+    ADD CONSTRAINT space_editors_space_to_address FOREIGN KEY (space) REFERENCES public.spaces(address);
+
+ALTER TABLE public.space_editor_controllers
+    ADD CONSTRAINT space_editor_controllers_space_to_address FOREIGN KEY (space) REFERENCES public.spaces(address);
+
 
 
 -- Disable All Triggers so we can play fast and loose with foreign keys
@@ -218,6 +253,9 @@ ALTER TABLE public.proposed_versions DISABLE TRIGGER ALL;
 ALTER TABLE public.triples DISABLE TRIGGER ALL;
 ALTER TABLE public.subspaces DISABLE TRIGGER ALL;
 ALTER TABLE public.versions DISABLE TRIGGER ALL;
+ALTER TABLE public.space_admins DISABLE TRIGGER ALL;
+ALTER TABLE public.space_editors DISABLE TRIGGER ALL;
+ALTER TABLE public.space_editor_controllers DISABLE TRIGGER ALL;
 
 CREATE INDEX idx_entity_attribute ON public.triples(entity_id, attribute_id);
 CREATE INDEX idx_entity_attribute_value_id ON public.triples(entity_id, attribute_id, value_id);
