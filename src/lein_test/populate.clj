@@ -2,6 +2,7 @@
  (:require
   [honey.sql :as sql]
   [honey.sql.helpers :as h]
+  [cheshire.core :as ch]
   [lein-test.cache :refer [cached-actions cached-entries]]
   [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
   [lein-test.db-helpers :refer [try-execute]]
@@ -13,10 +14,8 @@
   (let [formatted-sql (-> (h/insert-into :public/entities)
                           (h/values (into [] (map ->entity actions)))
                           (h/on-conflict :id (h/do-nothing))
-                          (sql/format {:pretty true})
-                          try-execute)]
-    (println "Generated SQL:" formatted-sql)
-    formatted-sql))
+                          (sql/format {:pretty true}))]
+    (try-execute formatted-sql)))
 
 (defn populate-triples
   "Takes in a seq of actions and populates the `triples` table"
@@ -46,6 +45,7 @@
             (sql/format {:pretty true})
             try-execute))))
 
+; TODO FIX THIS NAME
 (defn entry->actions
   [entry entity-id]
   (filter #(= (:entityId %) entity-id) entry))
@@ -137,18 +137,18 @@
         (when is-attribute-flag-update
           (update-entity (:entity_id triple) :is_attribute (if is-delete-triple nil (boolean (:value_id triple)))))))))
 
-(defn entry->proposal
-  [log-entry]
-  (let [first-entry (first log-entry)
-        author (:author first-entry) ;NOTE the author will be the same for all triples in an action
-        space (:space first-entry)
-        block-number (:block-number first-entry)
+(defn actions->proposal
+  [actions]
+  (let [first-action (first actions)
+        author (:author first-action) ;NOTE the author will be the same for all triples in an action
+        space (:space first-action)
+        block-number (:block-number first-action)
         proposal-id (str (java.util.UUID/randomUUID))
-        entity-ids (into #{} (map :entityId log-entry))
-        action-map (map #(entry->actions log-entry %) entity-ids)
-        proposal-name (:name log-entry)
+        entity-ids (into #{} (map :entityId actions))
+        action-map (map #(entry->actions actions %) entity-ids) ; sequence of sequences
+        proposal-name "LKJLKJLKJLKJ" ;(:name log-entry)
         proposal (new-proposal block-number block-number author proposal-id space proposal-name)
-        proposed-versions+actions (map #(->proposed-version+actions % block-number block-number author proposal-id proposal-name) action-map)]
+        proposed-versions+actions (map #(->proposed-version+actions % block-number block-number author proposal-id proposal-name) action-map)] ; list of arrays length 2
     [proposal proposed-versions+actions]))
 
 (defn- populate-proposed-version+actions
@@ -158,12 +158,14 @@
     (populate-actions actions)))
 
 (defn populate-proposals
-  [log-entry]
-  (let [[proposal proposed-version+actions] (entry->proposal log-entry)]
-    (println "PROPOSAL: " proposal)
-    (println "OTHER THING: " proposed-version+actions)
+  [actions]
+  (let [[proposal proposed-versions+actions] (actions->proposal actions)]
     (populate-proposal proposal)
-    (map populate-proposed-version+actions proposed-version+actions)))
+    ;(println (first proposed-version+actions))))
+    (doseq [version+actions proposed-versions+actions]
+      (println "Version + actions" version+actions)
+      (populate-proposed-version+actions version+actions))))
+    ;(map populate-proposed-version+actions proposed-version+actions)))
 
 (defn populate-account
   [actions]
@@ -175,17 +177,20 @@
           sql/format
           try-execute))))
 
-(defn log-entry->db
+(defn actions->db
  [actions]
- (populate-entities actions)
- (populate-triples actions)
- (populate-account actions)
- (populate-spaces actions)
- (populate-columns actions)
- (populate-proposals actions))
-
-(let [thangs (take 10 cached-actions)]
-   (populate-proposals (first thangs)))
+ ;(doseq [fucku actions]
+ ;   (populate-entities fucku)]
+ ;(doseq [fucku actions]
+ ;   (populate-triples fucku))
+ ;(doseq [fucku actions]
+   ;(populate-account fucku)]
+ ;(doseq [fucku actions]
+   ;(populate-spaces fucku)])
+ ;(doseq [fucku actions]
+   ;(populate-columns fucku)])
+ (doseq [fucku actions]
+    (populate-proposals fucku)))
 
 (defn roles-granted->db [roles-granted]
  []

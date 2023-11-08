@@ -10,7 +10,7 @@
             [clojure.core.async :as async]
             [clojure.string :as string]
             [lein-test.db-helpers :refer [update-cursor get-cursor]]
-            [lein-test.populate :refer [log-entry->db]]
+            [lein-test.populate :refer [actions->db]]
             [lein-test.cache :refer [cached-actions]]
             [lein-test.utils :refer [slurp-bytes write-file decode-base64 ipfs-fetch]]
             [sf.substreams.v1 :as v1]))
@@ -96,7 +96,7 @@
 (defmethod process-geo-data :from-cache
  [_]
  (doseq [entry cached-actions]
-  (log-entry->db entry)))
+  (actions->db entry)))
  ;; (let [entry-filename (format-entry-filename entry)
  ;;       entry-filename (str entry-path entry-filename)]
  ;;      (when (file-exists? entry-filename)
@@ -108,9 +108,9 @@
  ;;    (when (not (= :null (:role entry)))
  ;;      (write-file (str revoked-path (:id entry)) (protojure/->pb entry)))))
 
-(geo/pb->RoleGranted (slurp-bytes "./new-cache/roles-granted/36472429-0xa8fe17eb738b8bbeb3f567ad0b3f426d1d8f74af053c3bd63c35e8193f0894aa-4"))
+;(geo/pb->RoleGranted (slurp-bytes "./new-cache/roles-granted/36472429-0xa8fe17eb738b8bbeb3f567ad0b3f426d1d8f74af053c3bd63c35e8193f0894aa-4"))
 
-(geo/pb->EntryAdded (slurp-bytes "./new-cache/entries-added/36472440_0_0x170b749413328ac9a94762031a7a05b00c1d2e34_0x66703c058795b9cb215fbcc7c6b07aee7d216f24"))
+;(geo/pb->EntryAdded (slurp-bytes "./new-cache/entries-added/36472440_0_0x170b749413328ac9a94762031a7a05b00c1d2e34_0x66703c058795b9cb215fbcc7c6b07aee7d216f24"))
 
 (defn handle-block-scoped-data
   [data]

@@ -14,7 +14,7 @@
    (->> (filter #(action/valid-action? %) actions)
         (map #(assoc % :space space :author author :block-number block-number)))))
 
-(defn- json->actions
+(defn json->actions
   ([path]
    (let [json (slurp path)]
      (validate-actions ((ch/parse-string json true) :actions))))
@@ -66,3 +66,11 @@
                          (map extract-file-meta)
                          sort-files
                          (map #(json->actions "./new-cache/actions/" (:filename %) (:space %) (:author %) (:block %)))))
+
+(def y-freeze (->> (io/file "./new-cache/actions/")
+                   file-seq
+                   rest
+                   (map #(string/replace % #"./new-cache/actions/" ""))
+                   (map extract-file-meta)
+                   sort-files
+                   (map #(str "./new-cache/actions/" (:filename %)))))

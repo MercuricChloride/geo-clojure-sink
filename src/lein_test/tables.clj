@@ -17,8 +17,8 @@
         attributeId (:attributeId action)
         value-key (value-type (:value action))
         value-id (:id (:value action))
-        value (:value (:value action))
-        ]
+        value (:value (:value action))]
+        
     {:id (str type "-" entityId "-" attributeId)
      :action_type type
      :entity entityId
@@ -26,13 +26,13 @@
      value-key (if (= value-key :entity_value) value-id value)
      :value_id value-id
      :value_type (:type (:value action))
-     :proposed_version_id proposed-version-id
-     }))
+     :proposed_version_id proposed-version-id}))
+     
 
 (defn generate-triple-id
   [space entity-id attribute-id value-id]
-  (str space ":" entity-id ":" attribute-id ":" value-id)
-  )
+  (str space ":" entity-id ":" attribute-id ":" value-id))
+  
 
 (defn ->triple
   "Takes in an action and returns an entry in the triples table"
@@ -46,16 +46,16 @@
      :value_type (:type (:value action))
      :defined_in space
      :is_protected false
-     :deleted (if (= action-type "deleteTriple") true false)
-     }))
+     :deleted (if (= action-type "deleteTriple") true false)}))
+     
 
 (defn ->entity
   "Takes in an action and returns an entry in the entities table"
   [action]
   (let [entityId (:entityId action) space (:space action)]
     {:id entityId
-     :defined_in space
-     }))
+     :defined-in space}))
+     
 
 (defn ->entity-type
   "Takes in an action and returns an entry in the entity_types table"
