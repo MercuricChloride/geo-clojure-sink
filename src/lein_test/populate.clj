@@ -2,6 +2,7 @@
  (:require
   [honey.sql :as sql]
   [honey.sql.helpers :as h]
+  [lein-test.cache :refer [cached-actions cached-entries]]
   [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
   [lein-test.db-helpers :refer [try-execute]]
   [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
@@ -35,10 +36,11 @@
       (sql/format {:pretty true})
       try-execute))
 
-(defn populate-spaces [actions]
+(defn populate-spaces
+  [actions]
   (let [filtered (filter #(= (:attributeId %) "space") actions)]
     (when (< 0 (count filtered))
-        (-> (h/insert-into :spaces)
+        (-> (h/insert-into :public/spaces)
             (h/values (into [] (map ->spaces filtered)))
             (h/on-conflict :id (h/do-nothing))
             (sql/format {:pretty true})
@@ -53,13 +55,12 @@
   (let [proposed-version-id (str (java.util.UUID/randomUUID))]
     [{:id proposed-version-id
       :name proposal-name
-      :description nil ;TODO Eventually this should have a value
+      ;:description nil ;TODO Eventually this should have a value
       :created-at timestamp
       :created-at-block created-at-block
       :created-by author
       :entity (:entityId (first action-map))
       :proposal-id proposal-id}
-
      (map #(->action % proposed-version-id) action-map)]))
 
 
@@ -159,34 +160,32 @@
 (defn populate-proposals
   [log-entry]
   (let [[proposal proposed-version+actions] (entry->proposal log-entry)]
+    (println "PROPOSAL: " proposal)
+    (println "OTHER THING: " proposed-version+actions)
     (populate-proposal proposal)
     (map populate-proposed-version+actions proposed-version+actions)))
 
-(defn- entry->author
-  [entry]
-  (->> entry
-     first
-     :author))
-
 (defn populate-account
-  [log-entry]
-  (let [account (entry->author log-entry)]
+  [actions]
+  (let [account (:author (first actions))]
     (when (not (nil? account))
       (-> (h/insert-into :public/accounts)
           (h/values [{:id account}])
           (h/on-conflict :id (h/do-nothing))
-          (sql/format)
+          sql/format
           try-execute))))
 
 (defn log-entry->db
- [log-entry]
- (populate-entities log-entry)
- (populate-triples log-entry)
- (populate-account log-entry)
- (populate-spaces log-entry)
- (populate-columns log-entry)
- (populate-proposals log-entry))
+ [actions]
+ (populate-entities actions)
+ (populate-triples actions)
+ (populate-account actions)
+ (populate-spaces actions)
+ (populate-columns actions)
+ (populate-proposals actions))
 
+(let [thangs (take 10 cached-actions)]
+   (populate-proposals (first thangs)))
 
 (defn roles-granted->db [roles-granted]
  []

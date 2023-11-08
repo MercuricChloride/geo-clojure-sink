@@ -38,27 +38,31 @@
      :author (get parts 3)
      :filename filename}))
 
-(def new-files (->> (io/file "./new-cache/entries-added/")
-                    file-seq
-                    rest
-                    (map #(geo/pb->EntryAdded (slurp-bytes %)))))
 
-(def roles-granted (->> (io/file "./new-cache/roles-granted/")
-                    file-seq
-                    rest
-                    (map #(geo/pb->RoleGranted (slurp-bytes %)))
-                    (filter #(not (= (:role %) :null)))))
+(def cached-roles-granted (->> (io/file "./new-cache/roles-granted/")
+                           file-seq
+                           rest
+                           (map #(geo/pb->RoleGranted (slurp-bytes %)))
+                           (filter #(not (= (:role %) :null)))))
 
-(def roles-revoked (->> (io/file "./new-cache/roles-revoked/")
-                    file-seq
-                    rest
-                    (map #(geo/pb->RoleRevoked (slurp-bytes %)))
-                    (filter #(not (= (:role %) :null)))))
+(def cached-roles-revoked (->> (io/file "./new-cache/roles-revoked/")
+                               file-seq
+                               rest
+                               (map #(geo/pb->RoleRevoked (slurp-bytes %)))
+                               (filter #(not (= (:role %) :null)))))
 
-(def cached-log-entries (->> (io/file "./new-cache/actions/")
-                             file-seq
-                             rest
-                             (map #(string/replace % #"./new-cache/actions/" ""))
-                             (map extract-file-meta)
-                             sort-files
-                             (map #(json->actions "./new-cache/actions/" (:filename %) (:space %) (:author %) (:block %)))))
+(def cached-entries (->> (io/file "./new-cache/actions/")
+                         file-seq
+                         rest
+                         (map #(string/replace % #"./new-cache/actions/" ""))
+                         (map extract-file-meta)
+                         sort-files))
+
+
+(def cached-actions (->> (io/file "./new-cache/actions/")
+                         file-seq
+                         rest
+                         (map #(string/replace % #"./new-cache/actions/" ""))
+                         (map extract-file-meta)
+                         sort-files
+                         (map #(json->actions "./new-cache/actions/" (:filename %) (:space %) (:author %) (:block %)))))

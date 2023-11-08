@@ -23,7 +23,7 @@
 
 (defn update-cursor
   [cursor-string block-number]
-  (-> (h/insert-into :cursors)
+  (-> (h/insert-into :public/cursors)
       (h/values [{:id 0 :cursor cursor-string :block-number block-number}])
       (h/on-conflict :id (h/do-update-set :cursor :block-number))
       (sql/format)
