@@ -1,12 +1,9 @@
 (ns lein-test.populate
- (:require
-  [honey.sql :as sql]
-  [honey.sql.helpers :as h]
-  [cheshire.core :as ch]
-  [lein-test.cache :refer [cached-actions cached-entries]]
-  [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
-  [lein-test.db-helpers :refer [try-execute]]
-  [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
+ (:require [honey.sql :as sql]
+           [honey.sql.helpers :as h]
+           [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
+           [lein-test.db-helpers :refer [try-execute]]
+           [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
 
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
@@ -56,8 +53,8 @@
     [{:id proposed-version-id
       :name proposal-name
       ;:description nil ;TODO Eventually this should have a value
-      :created-at timestamp
-      :created-at-block created-at-block
+      :created-at (Integer/parseInt timestamp)
+      :created-at-block (Integer/parseInt created-at-block)
       :created-by author
       :entity (:entityId (first action-map))
       :proposal-id proposal-id}
@@ -70,8 +67,8 @@
   {:id proposal-id
    :name proposal-name
    :description nil
-   :created-at timestamp
-   :created-at-block created-at-block
+   :created-at (Integer/parseInt timestamp)
+   :created-at-block (Integer/parseInt created-at-block)
    :created-by author
    :space space
    :status "APPROVED"}) ;NOTE THIS IS HARDCODED FOR NOW UNTIL GOVERNANCE FINALIZED

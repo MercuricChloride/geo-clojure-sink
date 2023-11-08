@@ -1,16 +1,18 @@
 (ns lein-test.cache
-  (:require
-   [cheshire.core :as ch]
-   [clojure.java.io :as io]
-   [clojure.string :as string]
-   [geo.clojure.sink :as geo]
-   [lein-test.spec.action :as action]
-   [lein-test.utils :refer [slurp-bytes]]))
-
-(defn- validate-actions
+  (:require [cheshire.core :as ch]
+            [clojure.java.io :as io]
+            [clojure.string :as string]
+            [geo.clojure.sink :as geo]
+            [lein-test.spec.action :as action]
+            [lein-test.utils :refer [slurp-bytes]]))
+(defn validate-actions
   ([actions]
    (filter #(action/valid-action? %) actions))
   ([space author block-number actions]
+   (println "space:" space)
+   (println "author:" author)
+   (println "block-number:" block-number)
+   (println "first actions" (first actions))
    (->> (filter #(action/valid-action? %) actions)
         (map #(assoc % :space space :author author :block-number block-number)))))
 
