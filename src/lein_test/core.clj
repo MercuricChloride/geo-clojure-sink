@@ -30,9 +30,20 @@
   "The main enchilada that runs when you write lein run"
   [& args]
 
-  (handle-args args)
+  (let [args (into #{} args)
+        from-cache (get args "--from-cache")
+        reset-cursor (get args "--reset-cursor")]
 
-  (while true
-    (println "Starting stream at block #" (str @substreams/current-block))
-    (let [client (substreams/spawn-client)]
-      (substreams/start-stream client start-block stop-block))))
+    (when reset-cursor
+      (swap! substreams/current-block (fn [_] (str start-block)))
+      (swap! substreams/cursor (fn [_] "")))
+
+    (when from-cache
+      (println "from-cache")
+      (doseq [actions cached-actions]
+        (actions->db actions)))
+
+    (while (not from-cache)
+      (println "from-stream block #" (str @substreams/current-block))
+      (let [client (substreams/spawn-client)]
+        (substreams/start-stream client start-block stop-block)))))

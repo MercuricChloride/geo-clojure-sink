@@ -71,10 +71,10 @@
   (let [data (string/replace-first uri "data:application/json;base64," "")]
     (decode-base64 data)))
 
-(defmulti process-geo-data (fn [_] @sink-mode))
+(defmulti process-geo-data (fn [_ b] b))
 
 (defmethod process-geo-data :populate-cache
-  [geo-output]
+  [geo-output _]
   (let [entries (:entries geo-output)
         roles-granted (:roles-granted geo-output)
         roles-revoked (:roles-revoked geo-output)
@@ -94,8 +94,8 @@
       (when (not (= :null (:role entry)))
         (write-file (str revoked-path (:id entry)) (protojure/->pb entry))))))
   
-(defmethod process-geo-data :from-cache
-  [geo-output]
+(defmethod process-geo-data :populate-db
+  [geo-output _]
   (let [entries (:entries geo-output)]
     (when (< 0 (count entries))
      (doseq [entry entries]
@@ -142,7 +142,9 @@
               (println "Empty block at: " block-number))
             (do
               (println "Got map output at block:" block-number)
-              (process-geo-data geo-output)))
+              (process-geo-data geo-output :populate-cache)
+              (process-geo-data geo-output :populate-db)
+              ))
           (swap! current-block (fn [_] (str block-number)))
           (swap! cursor (fn [_] stream-cursor)))))
     (catch Exception e
