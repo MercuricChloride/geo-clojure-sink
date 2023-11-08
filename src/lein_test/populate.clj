@@ -53,8 +53,8 @@
     [{:id proposed-version-id
       :name proposal-name
       ;:description nil ;TODO Eventually this should have a value
-      :created-at (Integer/parseInt timestamp)
-      :created-at-block (Integer/parseInt created-at-block)
+      :created-at timestamp
+      :created-at-block created-at-block
       :created-by author
       :entity (:entityId (first action-map))
       :proposal-id proposal-id}
@@ -67,8 +67,8 @@
   {:id proposal-id
    :name proposal-name
    :description nil
-   :created-at (Integer/parseInt timestamp)
-   :created-at-block (Integer/parseInt created-at-block)
+   :created-at timestamp
+   :created-at-block created-at-block
    :created-by author
    :space space
    :status "APPROVED"}) ;NOTE THIS IS HARDCODED FOR NOW UNTIL GOVERNANCE FINALIZED

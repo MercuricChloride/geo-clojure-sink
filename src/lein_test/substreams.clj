@@ -99,7 +99,7 @@
   (let [entries (:entries geo-output)]
     (when (< 0 (count entries))
      (doseq [entry entries]
-       (let [block-number @current-block
+       (let [block-number (Integer/parseInt @current-block)
              author (:author entry)
              space (:space entry)
              uri (:uri entry)
