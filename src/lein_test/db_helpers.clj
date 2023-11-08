@@ -162,7 +162,6 @@
   (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/sql/nuke.sql")])))
 
 ;; (nuke-db)
-
 (defn bootstrap-db []
   (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/migrations/001_bootstrap.sql")])))
 

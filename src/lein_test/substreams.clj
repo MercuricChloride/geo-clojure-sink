@@ -10,6 +10,9 @@
             [clojure.core.async :as async]
             [clojure.string :as string]
             [lein-test.db-helpers :refer [update-cursor get-cursor]]
+            [lein-test.populate :refer [log-entry->db]]
+            [lein-test.cache :refer [cached-log-entries]]
+            [lein-test.utils :refer [slurp-bytes write-file]]
             [sf.substreams.v1 :as v1])
   (:import java.util.Base64))
 
@@ -35,19 +38,6 @@
             (f val)
             (recur))
           (println "Channel done processing")))))
-
-
-(defn slurp-bytes
-  "Slurp the bytes from a slurpable thing"
-  [x]
-  (with-open [in (io/input-stream x)
-              out (java.io.ByteArrayOutputStream.)]
-    (io/copy in out)
-    (.toByteArray out)))
-
-(defn write-file [path input]
-  (with-open [o (io/output-stream path)]
-    (.write o input)))
 
 (defn empty-output?
   [input]
@@ -126,8 +116,22 @@
        (write-file (str revoked-path (:id entry)) (protojure/->pb entry))))))
 
 (defmethod process-geo-data :from-cache
- [geo-output]
- (println "should update the db"))
+ [_]
+ (doseq [entry cached-log-entries]
+  (log-entry->db entry)))
+ ;; (let [entry-filename (format-entry-filename entry)
+ ;;       entry-filename (str entry-path entry-filename)]
+ ;;      (when (file-exists? entry-filename)
+ ;;        (log-entry->db entry))
+ ;;  (doseq [entry roles-granted]
+ ;;    (when (not (= :null (:role entry)))
+ ;;      (write-file (str granted-path (:id entry)) (protojure/->pb entry))))
+ ;;  (doseq [entry roles-revoked]
+ ;;    (when (not (= :null (:role entry)))
+ ;;      (write-file (str revoked-path (:id entry)) (protojure/->pb entry)))))
+
+
+(geo/pb->RoleGranted (slurp-bytes "./new-cache/roles-granted/36472429-0xa8fe17eb738b8bbeb3f567ad0b3f426d1d8f74af053c3bd63c35e8193f0894aa-4"))
 
 (defn handle-block-scoped-data
   [data]
