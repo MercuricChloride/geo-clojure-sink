@@ -161,11 +161,8 @@
   [actions]
   (let [[proposal proposed-versions+actions] (actions->proposal actions)]
     (populate-proposal proposal)
-    ;(println (first proposed-version+actions))))
     (doseq [version+actions proposed-versions+actions]
-      (println "Version + actions" version+actions)
       (populate-proposed-version+actions version+actions))))
-    ;(map populate-proposed-version+actions proposed-version+actions)))
 
 (defn populate-account
   [actions]
@@ -179,18 +176,18 @@
 
 (defn actions->db
  [actions]
- ;(doseq [fucku actions]
- ;   (populate-entities fucku)]
- ;(doseq [fucku actions]
- ;   (populate-triples fucku))
- ;(doseq [fucku actions]
-   ;(populate-account fucku)]
- ;(doseq [fucku actions]
-   ;(populate-spaces fucku)])
- ;(doseq [fucku actions]
-   ;(populate-columns fucku)])
- (doseq [fucku actions]
-    (populate-proposals fucku)))
+ (println "populating entities")
+ (populate-entities actions)
+ (println "populating triples")
+ (populate-triples actions)
+ (println "populating accounts")
+ (populate-account actions)
+ (println "populating spaces")
+ (populate-spaces actions)
+ (println "populating columns")
+ (populate-columns actions)
+ (println "populating proposals")
+ (populate-proposals actions))
 
 (defn roles-granted->db [roles-granted]
  []

@@ -28,7 +28,8 @@
 (defn -main
   "The main enchilada that runs when you write lein run"
   [& args]
-  (actions->db cached-actions))
+  (doseq [actions cached-actions]
+    (actions->db actions)))
 
   ;(while true
     ;(println "Starting stream at block #" (str @substreams/current-block))
