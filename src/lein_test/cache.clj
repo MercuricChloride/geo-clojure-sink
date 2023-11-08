@@ -68,11 +68,3 @@
                          (map extract-file-meta)
                          sort-files
                          (map #(json->actions "./new-cache/actions/" (:filename %) (:space %) (:author %) (:block %)))))
-
-(def y-freeze (->> (io/file "./new-cache/actions/")
-                   file-seq
-                   rest
-                   (map #(string/replace % #"./new-cache/actions/" ""))
-                   (map extract-file-meta)
-                   sort-files
-                   (map #(str "./new-cache/actions/" (:filename %)))))

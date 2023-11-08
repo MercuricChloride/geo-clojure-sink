@@ -109,7 +109,7 @@
              valid-actions (validate-actions space author block-number actions)]
             (actions->db valid-actions))))))
 
-          ;(actions->db (validate-actions (:actions))))))))
+ ;;(actions->db (validate-actions (:actions))))))))
  ;; (let [entry-filename (format-entry-filename entry)
  ;;       entry-filename (str entry-path entry-filename)]
  ;;      (when (file-exists? entry-filename)
@@ -125,45 +125,45 @@
 
 ;(geo/pb->EntryAdded (slurp-bytes "./new-cache/entries-added/36472440_0_0x170b749413328ac9a94762031a7a05b00c1d2e34_0x66703c058795b9cb215fbcc7c6b07aee7d216f24"))
 
-    (defn handle-block-scoped-data
-      [data]
-      (try
-        (let [message (:message data)
-              block-data (:block-scoped-data message)
-              stream-cursor (:cursor block-data)]
-          (when block-data
-            (let [output (:output block-data)
-                  map-output (:map-output output)
-                  map-value (:value map-output)
-                  geo-output (geo/pb->GeoOutput map-value)
-                  block-number (:number (:clock block-data))]
-              (if (empty-output? geo-output)
-                (when (= (mod block-number 100) 0)
-                  (println "Empty block at: " block-number))
-                (do
-                  (println "Got map output at block:" block-number)
-                  (process-geo-data geo-output)))
-              (swap! current-block (fn [_] (str block-number)))
-              (swap! cursor (fn [_] stream-cursor)))))
-        (catch Exception e
-          (println "GOT ERROR: \n\n\n\n\n" e))))
+(defn handle-block-scoped-data
+  [data]
+  (try
+    (let [message (:message data)
+          block-data (:block-scoped-data message)
+          stream-cursor (:cursor block-data)]
+      (when block-data
+        (let [output (:output block-data)
+              map-output (:map-output output)
+              map-value (:value map-output)
+              geo-output (geo/pb->GeoOutput map-value)
+              block-number (:number (:clock block-data))]
+          (if (empty-output? geo-output)
+            (when (= (mod block-number 100) 0)
+              (println "Empty block at: " block-number))
+            (do
+              (println "Got map output at block:" block-number)
+              (process-geo-data geo-output)))
+          (swap! current-block (fn [_] (str block-number)))
+          (swap! cursor (fn [_] stream-cursor)))))
+    (catch Exception e
+      (println "GOT ERROR: \n\n\n\n\n" e))))
 
 
-    (def spkg (v1/pb->Package (slurp-bytes "geo-substream-v1.0.2.spkg")))
+(def spkg (v1/pb->Package (slurp-bytes "geo-substream-v1.0.2.spkg")))
 
-    (defn spawn-client [] @(grpc.http2/connect {:uri "https://polygon.substreams.pinax.network:443"
-                                                :ssl true
-                                                :idle-timeout 60000
-                                                :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
-    (defn start-stream
-      ([client]
-       (start-stream client 36472424 48000000))
-      ([client start-block stop-block]
-       (let [channel (async/chan (async/buffer 10))]
+(defn spawn-client [] @(grpc.http2/connect {:uri "https://polygon.substreams.pinax.network:443"
+                                            :ssl true
+                                            :idle-timeout 60000
+                                            :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
+(defn start-stream
+  ([client]
+    (start-stream client 36472424 48000000))
+  ([client start-block stop-block]
+    (let [channel (async/chan (async/buffer 10))]
 
-         (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
-                                                 :stop-block-num stop-block
-                                                 :start-cursor @cursor
-                                                 :modules (:modules spkg)
-                                                 :output-module "geo_out"}) channel)
-         (take-all channel handle-block-scoped-data))))
+      (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
+                                              :stop-block-num stop-block
+                                              :start-cursor @cursor
+                                              :modules (:modules spkg)
+                                              :output-module "geo_out"}) channel)
+      (take-all channel handle-block-scoped-data))))

@@ -23,9 +23,8 @@
     (when from-cache
       (println "from-cache")
       (doseq [actions cached-actions]
-        (actions->db actions)))
-      (swap! substreams/sink-mode (fn [_] :from-cache))))
-
+        (actions->db actions))
+      (swap! substreams/sink-mode (fn [_] :from-cache)))))
 
 (defn -main
   "The main enchilada that runs when you write lein run"
