@@ -6,33 +6,32 @@
             [lein-test.constants :refer [ATTRIBUTES default-geo-start-block
                                          ENTITIES ROOT-SPACE-ADDRESS]]
             [lein-test.tables :refer [generate-triple-id]]
-            [next.jdbc :as jdbc]
-            [next.jdbc.connection :as connection])
-  (:import (com.zaxxer.hikari HikariDataSource)))
+            [next.jdbc :as jdbc])
+  (:import (com.zaxxer.hikari HikariConfig HikariDataSource)))
 
 
-(println "DB Environment Variables:")
-(println "PGDATABASE: " (env "PGDATABASE"))
-(println "PGUSER: " (env "PGUSER"))
-(println "PGPASSWORD: " (env "PGPASSWORD"))
-(println "PGHOST: " (env "PGHOST"))
+(def jdbc-url
+  (str "jdbc:postgresql://"
+       (env "PGHOST") ":"
+       (env "PGPORT") "/"
+       (env "PGDATABASE") "?user="
+       (env "PGUSER") "&password="
+       (env "PGPASSWORD")))
+
+(println "JDBC URL: " jdbc-url)
 
 
+;; (def ds (connection/->pool HikariDataSource
+;;                            ;; Note that PGHOST should be set to "host.docker.internal" in your .env
+;;                            ;; for local docker development or "localhost" when just using "lein run" locally
+;;                            ;; There might be a better way to do this...
+;;                            {:dbtype "postgres" :uri (env "DATABASE_URL") :maximumPoolSize 10
+;;                             :dataSourceProperties {:socketTimeout 30}}))
 
-(defn format-pg-database-url-as-jdbc [url]
-  (let [parsed-url (re-matches #"postgres://([^:/]+)(?::(\d+))?/([^?]+)" url)
-        host (nth parsed-url 1)
-        port (or (nth parsed-url 2) "5432")
-        database (nth parsed-url 3)]
-    (str "jdbc:postgresql://" host ":" port "/" database)))
-
-(def ds (connection/->pool HikariDataSource
-                           ;; Note that PGHOST should be set to "host.docker.internal" in your .env
-                           ;; for local docker development or "localhost" when just using "lein run" locally
-                           ;; There might be a better way to do this...
-                           {:dbtype "postgres" :uri (env "DATABASE_URL") :maximumPoolSize 10
-                            :dataSourceProperties {:socketTimeout 30}}))
-
+(def ds 
+  (let [config (HikariConfig.)]
+    (.setJdbcUrl config jdbc-url)
+    (HikariDataSource. config)))
 
 (defn try-execute [query]
   (try
