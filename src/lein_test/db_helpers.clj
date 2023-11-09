@@ -10,6 +10,12 @@
             [next.jdbc.connection :as connection])
   (:import (com.zaxxer.hikari HikariDataSource)))
 
+
+(println "Environment Variables: " (System/getenv))
+
+
+
+
 (def ds (connection/->pool HikariDataSource
                            {:dbtype "postgres" :dbname (env "PGDATABASE") :username (env "PGUSER") :password (env "PGPASSWORD") :maximumPoolSize 10
                             :dataSourceProperties {:socketTimeout 30}}))

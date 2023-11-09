@@ -1,22 +1,24 @@
 #!/bin/bash
 
-# Perform the migrations using sea
-# /usr/local/bin/sea-orm-cli migrate up
-
+# Load environment variables from .env file if it exists (Local Development)
 if [[ -f .env ]]; then
     export $(cat .env | sed 's/#.*//g' | xargs)
 fi
 
-if [[ -z "$PINAX_API_KEY" && -z "$STREAMINGFAST_API_KEY" ]]; then
-    echo "Error: Either PINAX_API_KEY or STREAMINGFAST_API_KEY must be provided"
+# Check for necessary API key and set up the SUBSTREAMS_API_TOKEN
+if [[ -z "$PINAX_API_KEY"  ]]; then
+    echo "Error: PINAX_API_KEY must be provided"
     exit 1
-elif [[ -n "$PINAX_API_KEY" ]]; then
-    export SUBSTREAMS_API_TOKEN=$(curl https://auth.pinax.network/v1/auth/issue -s --data-binary '{"api_key":"'$PINAX_API_KEY'"}' | jq -r .token) 
-    echo $SUBSTREAMS_API_TOKEN set on SUBSTREAMS_API_TOKEN
-elif [[ -n "$STREAMINGFAST_API_KEY" ]]; then
-    export SUBSTREAMS_API_TOKEN=$(curl https://auth.streamingfast.io/v1/auth/issue -s --data-binary '{"api_key":"'$STREAMINGFAST_API_KEY'"}' | jq -r .token)
-    echo $SUBSTREAMS_API_TOKEN set on SUBSTREAMS_API_TOKEN
 fi
 
+# Assuming this is the command to get the token, uncomment and use it if necessary
+export SUBSTREAMS_API_TOKEN=$(curl https://auth.pinax.network/v1/auth/issue -s --data-binary '{"api_key":"'$PINAX_API_KEY'"}' | jq -r .token) 
+if [[ -z "$SUBSTREAMS_API_TOKEN"  ]]; then
+    echo "Error: SUBSTREAMS_API_TOKEN failed to be set"
+    exit 1
+fi
+echo $SUBSTREAMS_API_TOKEN set on SUBSTREAMS_API_TOKEN
+
 # Run your main application
-./geo-substream-sink "$@"
+# The "$@" will pass all the command line arguments received by the script to the Java application
+java -jar app-standalone.jar "$@"
