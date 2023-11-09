@@ -151,7 +151,7 @@
 
 (def spkg (v1/pb->Package (slurp-bytes "geo-substream-v1.0.2.spkg")))
 
-(defn spawn-client [] @(grpc.http2/connect {:uri "https://polygon.substreams.pinax.network:443"
+(defn spawn-client [] @(grpc.http2/connect {:uri (env "SUBSTREAMS_ENDPOINT")
                                             :ssl true
                                             :idle-timeout 60000
                                             :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))

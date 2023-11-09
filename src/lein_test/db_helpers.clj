@@ -10,14 +10,11 @@
             [next.jdbc.connection :as connection])
   (:import (com.zaxxer.hikari HikariDataSource)))
 
-
-(println "Environment Variables: " (System/getenv))
-
-
-
-
 (def ds (connection/->pool HikariDataSource
-                           {:dbtype "postgres" :dbname (env "PGDATABASE") :username (env "PGUSER") :password (env "PGPASSWORD") :maximumPoolSize 10
+                           ;; Note that PGHOST should be set to "host.docker.internal" in your .env
+                           ;; for local docker development or "localhost" when just using "lein run" locally
+                           ;; There might be a better way to do this...
+                           {:dbtype "postgres" :dbname (env "PGDATABASE") :host (env "PGHOST") :username (env "PGUSER") :password (env "PGPASSWORD") :maximumPoolSize 10
                             :dataSourceProperties {:socketTimeout 30}}))
 
 
