@@ -13,7 +13,6 @@
    (println "space:" space)
    (println "author:" author)
    (println "block-number:" block-number)
-   (println "first actions" (first actions))
    (->> (filter #(action/valid-action? %) actions)
         (map #(assoc % :space space :author author :block-number block-number :proposal-name proposal-name)))))
 

@@ -4,10 +4,12 @@
                                      cached-roles-revoked]]
             [lein-test.populate :refer [actions->db role-granted->db
                                         role-revoked->db]]
-            [lein-test.substreams :as substreams]))
+            [lein-test.substreams :as substreams]
+            [clojure.spec.alpha :as s]))
 
 (def start-block 36472424)
 (def stop-block 48000000)
+(s/check-asserts true)
 
 
 (defn -main

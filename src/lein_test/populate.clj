@@ -1,6 +1,8 @@
 (ns lein-test.populate
   (:require [honey.sql :as sql]
             [honey.sql.helpers :as h]
+            [lein-test.spec.action :as action-spec]
+            [clojure.spec.alpha :as s]
             [lein-test.access-control :refer [add-role remove-role]]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [try-execute]]
@@ -9,6 +11,7 @@
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
   [actions]
+  (s/assert ::action-spec/triples-with-proposal-names actions)
   (let [formatted-sql (-> (h/insert-into :public/entities)
                           (h/values (into [] (map ->entity actions)))
                           (h/on-conflict :id (h/do-nothing))
@@ -18,6 +21,7 @@
 (defn populate-triples
   "Takes in a seq of actions and populates the `triples` table"
   [actions]
+  (s/assert ::action-spec/triples-with-proposal-names actions)
   (-> (h/insert-into :public/triples)
       (h/values (map ->triple actions))
       (h/on-conflict :id (h/do-nothing))
@@ -27,6 +31,7 @@
 (defn populate-actions
   "Takes in a seq of actions and populates the `actions` table"
   [actions]
+  (s/assert ::action-spec/action-table-entries actions)
   (-> (h/insert-into :public/actions)
       (h/values (into [] actions))
       (h/on-conflict :id (h/do-nothing))
@@ -35,6 +40,7 @@
 
 (defn populate-spaces
   [actions]
+  (s/assert ::action-spec/triples-with-proposal-names actions)
   (let [filtered (filter #(= (:attributeId %) "space") actions)]
     (when (< 0 (count filtered))
       (-> (h/insert-into :public/spaces)
@@ -164,16 +170,17 @@
 
 (defn populate-account
   [actions]
+  (s/assert ::action-spec/triples-with-proposal-names actions)
   (let [account (:author (first actions))]
-    (when (not (nil? account))
       (-> (h/insert-into :public/accounts)
           (h/values [{:id account}])
           (h/on-conflict :id (h/do-nothing))
           sql/format
-          try-execute))))
+          try-execute)))
 
 (defn actions->db
   [actions]
+  (s/assert ::action-spec/triples-with-proposal-names actions)
   (println "populating entities")
   (populate-entities actions)
   (println "populating triples")
@@ -186,7 +193,6 @@
   (populate-columns actions)
   (println "populating proposals")
   (populate-proposals actions))
-
 
 (defn role-granted->db [role]
   (add-role role))
