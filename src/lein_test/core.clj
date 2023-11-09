@@ -26,7 +26,6 @@
       (println "from-cache")
       (doseq [actions cached-actions]
         (actions->db actions))
-      
       (doseq [roles cached-roles-granted]
         (doseq [role roles]
           (role-granted->db role)))

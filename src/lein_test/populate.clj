@@ -1,6 +1,7 @@
 (ns lein-test.populate
   (:require [honey.sql :as sql]
             [honey.sql.helpers :as h]
+            [lein-test.access-control :refer [add-role remove-role]]
             [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
             [lein-test.db-helpers :refer [try-execute]]
             [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
@@ -188,8 +189,8 @@
 
 
 (defn role-granted->db [role]
-  (println  role))
+  (add-role role))
 
 (defn role-revoked->db [role]
-  (println  role))
+  (remove-role role))
 

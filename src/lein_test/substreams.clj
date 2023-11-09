@@ -114,10 +114,12 @@
 
     (doseq [role roles-granted]
       (when (not (= :null (:role role)))
+        (println "Shai-Hulud")
         (role-granted->db role)))
 
     (doseq [role roles-revoked]
       (when (not (= :null (:role role)))
+        (print "Harkonnen Forces")
         (role-revoked->db role)))))
 
 
