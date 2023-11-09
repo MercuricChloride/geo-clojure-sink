@@ -5,7 +5,7 @@
             [clojure.string :as string]
             [dotenv :refer [env]]
             [geo.clojure.sink :as geo]
-            [lein-test.cache :refer [validate-actions]]
+            [lein-test.cache :refer [format+filter-actions]]
             [lein-test.db-helpers :refer [get-cursor update-cursor]]
             [lein-test.populate :refer [actions->db role-granted->db
                                         role-revoked->db]]
@@ -108,8 +108,10 @@
             uri (:uri entry)
             uri-data (->> uri
                           uri-data)
-            actions (:actions (ch/parse-string uri-data true))
-            valid-actions (validate-actions space author block-number actions)]
+            json (ch/parse-string uri-data true)
+            actions (:actions json)
+            proposal-name (:name json)
+            valid-actions (format+filter-actions space author block-number proposal-name actions)]
         (actions->db valid-actions)))
 
     (doseq [role roles-granted]
@@ -123,7 +125,7 @@
         (role-revoked->db role)))))
 
 
- ;;(actions->db (validate-actions (:actions))))))))
+ ;;(actions->db (format+filter-actions (:actions))))))))
  ;; (let [entry-filename (format-entry-filename entry)
  ;;       entry-filename (str entry-path entry-filename)]
  ;;      (when (file-exists? entry-filename)

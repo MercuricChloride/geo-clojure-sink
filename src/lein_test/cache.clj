@@ -5,29 +5,31 @@
             [geo.clojure.sink :as geo]
             [lein-test.spec.action :as action]
             [lein-test.utils :refer [slurp-bytes]]))
-(defn validate-actions
+
+(defn format+filter-actions
   ([actions]
    (filter #(action/valid-action? %) actions))
-  ([space author block-number actions]
+  ([space author block-number proposal-name actions]
    (println "space:" space)
    (println "author:" author)
    (println "block-number:" block-number)
    (println "first actions" (first actions))
    (->> (filter #(action/valid-action? %) actions)
-        (map #(assoc % :space space :author author :block-number block-number)))))
+        (map #(assoc % :space space :author author :block-number block-number :proposal-name proposal-name)))))
 
 (defn json->actions
   ([path]
    (let [json (slurp path)]
-     (validate-actions ((ch/parse-string json true) :actions))))
+     (format+filter-actions ((ch/parse-string json true) :actions))))
   ([prefix path]
    (let [json (slurp (str prefix path))]
-     (validate-actions ((ch/parse-string json true) :actions))))
+     (format+filter-actions ((ch/parse-string json true) :actions))))
   ([prefix path space author block-number]
-   (let [json (slurp (str prefix path))]
-     (->> (ch/parse-string json true)
-          :actions
-          (validate-actions space author block-number)))))
+   (let [json (slurp (str prefix path))
+         json (ch/parse-string json true)
+         actions (:actions json)
+         proposal-name (:name json)]
+        (format+filter-actions space author block-number proposal-name actions))))
 
 (defn sort-files [files]
   (sort-by (juxt :block :index) files))
@@ -52,14 +54,6 @@
                                rest
                                (map #(geo/pb->RoleRevoked (slurp-bytes %)))
                                (filter #(not (= (:role %) :null)))))
-
-(def cached-entries (->> (io/file "./new-cache/actions/")
-                         file-seq
-                         rest
-                         (map #(string/replace % #"./new-cache/actions/" ""))
-                         (map extract-file-meta)
-                         sort-files))
-
 
 (def cached-actions (->> (io/file "./new-cache/actions/")
                          file-seq

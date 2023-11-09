@@ -144,7 +144,7 @@
         proposal-id (str (java.util.UUID/randomUUID))
         entity-ids (into #{} (map :entityId actions))
         action-map (map #(entry->actions actions %) entity-ids) ; sequence of sequences
-        proposal-name "LKJLKJLKJLKJ" ;(:name log-entry)
+        proposal-name (:proposal-name first-action)
         proposal (new-proposal block-number block-number author proposal-id space proposal-name)
         proposed-versions+actions (map #(->proposed-version+actions % block-number block-number author proposal-id proposal-name) action-map)] ; list of arrays length 2
     [proposal proposed-versions+actions]))
