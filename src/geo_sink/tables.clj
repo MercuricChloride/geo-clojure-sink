@@ -1,4 +1,4 @@
-(ns lein-test.tables)
+(ns geo-sink.tables)
 
 (defn value-type
   "Returns the value type as a key for a triple's value"

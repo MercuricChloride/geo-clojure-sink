@@ -1,4 +1,4 @@
-# lein-test
+# geo-sink
 
 FIXME: description
 
@@ -10,7 +10,7 @@ Download from http://example.com/FIXME.
 
 FIXME: explanation
 
-    $ java -jar lein-test-0.1.0-standalone.jar [args]
+    $ java -jar geo-sink-0.1.0-standalone.jar [args]
 
 ## Options
 

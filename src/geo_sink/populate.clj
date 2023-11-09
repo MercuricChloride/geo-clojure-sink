@@ -1,12 +1,12 @@
-(ns lein-test.populate
+(ns geo-sink.populate
   (:require [honey.sql :as sql]
             [honey.sql.helpers :as h]
-            [lein-test.spec.action :as action-spec]
+            [geo-sink.spec.action :as action-spec]
             [clojure.spec.alpha :as s]
-            [lein-test.access-control :refer [add-role remove-role]]
-            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
-            [lein-test.db-helpers :refer [try-execute]]
-            [lein-test.tables :refer [->action ->entity ->spaces ->triple]]))
+            [geo-sink.access-control :refer [add-role remove-role]]
+            [geo-sink.constants :refer [ATTRIBUTES ENTITIES]]
+            [geo-sink.db-helpers :refer [try-execute]]
+            [geo-sink.tables :refer [->action ->entity ->spaces ->triple]]))
 
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"

@@ -1,10 +1,10 @@
-(ns lein-test.cache
+(ns geo-sink.cache
   (:require [cheshire.core :as ch]
             [clojure.java.io :as io]
             [clojure.string :as string]
             [geo.clojure.sink :as geo]
-            [lein-test.spec.action :as action]
-            [lein-test.utils :refer [slurp-bytes]]))
+            [geo-sink.spec.action :as action]
+            [geo-sink.utils :refer [slurp-bytes]]))
 
 (defn format+filter-actions
   ([actions]

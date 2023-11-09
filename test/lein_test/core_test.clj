@@ -1,6 +1,6 @@
-(ns lein-test.core-test
+(ns geo-sink.core-test
   (:require [clojure.test :refer :all]
-            [lein-test.core :refer :all]))
+            [geo-sink.core :refer :all]))
 
 (deftest a-test
   (testing "FIXME, I fail."

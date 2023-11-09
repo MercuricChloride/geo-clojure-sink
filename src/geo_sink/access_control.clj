@@ -1,7 +1,7 @@
-(ns lein-test.access-control
+(ns geo-sink.access-control
   (:require [honey.sql :as sql]
             [honey.sql.helpers :as h]
-            [lein-test.db-helpers :refer [try-execute]]))
+            [geo-sink.db-helpers :refer [try-execute]]))
 (def ADMIN_ROLE :admin)
 (def MEMBER_ROLE :member)
 (def MODERATOR_ROLE :moderator)

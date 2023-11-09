@@ -1,4 +1,4 @@
-(ns lein-test.utils
+(ns geo-sink.utils
   (:require [clojure.java.io :as io :refer [make-parents]])
   (:import java.util.Base64))
 

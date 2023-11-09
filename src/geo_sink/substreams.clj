@@ -1,17 +1,17 @@
-(ns lein-test.substreams
+(ns geo-sink.substreams
   (:gen-class)
   (:require [cheshire.core :as ch]
             [clojure.core.async :as async]
             [clojure.string :as string]
             [dotenv :refer [env]]
             [geo.clojure.sink :as geo]
-            [lein-test.cache :refer [format+filter-actions]]
-            [lein-test.constants :refer [cache-action-path cache-entry-path
+            [geo-sink.cache :refer [format+filter-actions]]
+            [geo-sink.constants :refer [cache-action-path cache-entry-path
                                          cache-granted-path cache-revoked-path]]
-            [lein-test.db-helpers :refer [get-cursor update-cursor]]
-            [lein-test.populate :refer [actions->db role-granted->db
+            [geo-sink.db-helpers :refer [get-cursor update-cursor]]
+            [geo-sink.populate :refer [actions->db role-granted->db
                                         role-revoked->db]]
-            [lein-test.utils :refer [decode-base64 ipfs-fetch slurp-bytes
+            [geo-sink.utils :refer [decode-base64 ipfs-fetch slurp-bytes
                                      write-file]]
             [protojure.grpc.client.providers.http2 :as grpc.http2]
             [protojure.protobuf :as protojure]

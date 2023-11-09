@@ -1,8 +1,8 @@
-(ns lein-test.pg-function-helpers
+(ns geo-sink.pg-function-helpers
   (:require [clojure.string :as s]
             [honey.sql :as sql]
-            [lein-test.constants :refer [ATTRIBUTES ENTITIES]]
-            [lein-test.db-helpers :refer [get-all-attribute-entities
+            [geo-sink.constants :refer [ATTRIBUTES ENTITIES]]
+            [geo-sink.db-helpers :refer [get-all-attribute-entities
                                           get-all-type-entities try-execute]]))
 
 (def type-id (str (:id (:type ATTRIBUTES))))

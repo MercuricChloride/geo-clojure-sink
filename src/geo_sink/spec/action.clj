@@ -1,4 +1,4 @@
-(ns lein-test.spec.action
+(ns geo-sink.spec.action
   (:gen-class)
   (:require [clojure.spec.alpha :as s]))
 

@@ -1,22 +1,22 @@
-(ns lein-test.core
+(ns geo-sink.core
   (:gen-class)
   (:require [clojure.spec.alpha :as s]
             [dotenv :refer [env]]
-            [lein-test.cache :refer [cached-actions cached-roles-granted
+            [geo-sink.cache :refer [cached-actions cached-roles-granted
                                      cached-roles-revoked]]
-            [lein-test.constants :refer [cache-action-path cache-entry-path
+            [geo-sink.constants :refer [cache-action-path cache-entry-path
                                          cache-granted-path cache-revoked-path
                                          default-geo-start-block]]
-            [lein-test.db-helpers :refer [reset-geo-db]]
-            [lein-test.populate :refer [actions->db role-granted->db
+            [geo-sink.db-helpers :refer [reset-geo-db]]
+            [geo-sink.populate :refer [actions->db role-granted->db
                                         role-revoked->db]]
-            [lein-test.substreams :as substreams]))
+            [geo-sink.substreams :as substreams]))
 
 (s/check-asserts true)
 
 
 (defn -main
-  "The main enchilada that runs when you write lein run"
+  "Core entrypoint for the geo-sink application"
   [& args]
 
   (let [args (into #{} args)

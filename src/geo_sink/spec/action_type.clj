@@ -1,8 +1,8 @@
-(ns lein-test.spec.action-type
+(ns geo-sink.spec.action-type
   (:require
    [clojure.spec.alpha :as s]
-   [lein-test.constants :as c]
-   [lein-test.spec.action :as a]))
+   [geo-sink.constants :as c]
+   [geo-sink.spec.action :as a]))
 
 (defn value-type [triple]
   (:type (:value triple)))

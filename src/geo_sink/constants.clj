@@ -1,4 +1,4 @@
-(ns lein-test.constants)
+(ns geo-sink.constants)
 
 (def ATTRIBUTES {:type {:id "type"
                         :name "Types"

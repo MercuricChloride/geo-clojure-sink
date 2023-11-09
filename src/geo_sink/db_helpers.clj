@@ -1,11 +1,11 @@
-(ns lein-test.db-helpers
+(ns geo-sink.db-helpers
   (:require [clojure.string]
             [dotenv :refer [env]]
             [honey.sql :as sql]
             [honey.sql.helpers :as h]
-            [lein-test.constants :refer [ATTRIBUTES default-geo-start-block
+            [geo-sink.constants :refer [ATTRIBUTES default-geo-start-block
                                          ENTITIES ROOT-SPACE-ADDRESS]]
-            [lein-test.tables :refer [generate-triple-id]]
+            [geo-sink.tables :refer [generate-triple-id]]
             [next.jdbc :as jdbc]
             [next.jdbc.connection :as connection])
   (:import (com.zaxxer.hikari HikariDataSource)))
