@@ -209,6 +209,15 @@ ALTER TABLE ONLY public.entities
 
 ALTER TABLE ONLY public.spaces
     ADD CONSTRAINT spaces_id_entity_id_fkey FOREIGN KEY (id) REFERENCES public.entities(id);
+    
+ALTER TABLE public.space_admins
+    ADD CONSTRAINT space_admins_account_fkey FOREIGN KEY (account) REFERENCES public.accounts(id);
+
+ALTER TABLE public.space_editors
+    ADD CONSTRAINT space_editors_account_fkey FOREIGN KEY (account) REFERENCES public.accounts(id);
+
+ALTER TABLE public.space_editor_controllers
+    ADD CONSTRAINT space_editor_controllers_account_fkey FOREIGN KEY (account) REFERENCES public.accounts(id);
 
 ALTER TABLE ONLY public.subspaces
     ADD CONSTRAINT subspaces_child_space_fkey FOREIGN KEY (child_space) REFERENCES public.spaces(id);
