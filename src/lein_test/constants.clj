@@ -84,3 +84,5 @@
                            :name "Attribute"}})
 
 (def ROOT-SPACE-ADDRESS "0x170b749413328ac9a94762031a7a05b00c1d2e34")
+
+(def default-geo-start-block 36472424)

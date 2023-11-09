@@ -1,21 +1,9 @@
-SET statement_timeout = 0;
-SET lock_timeout = 0;
-SET idle_in_transaction_session_timeout = 0;
-SET client_encoding = 'UTF8';
-SET standard_conforming_strings = on;
-SELECT pg_catalog.set_config('search_path', '', false);
-SET check_function_bodies = false;
-SET xmloption = content;
-SET client_min_messages = warning;
-SET row_security = off;
-
-CREATE TABLE public.accounts (
+CREATE TABLE IF NOT EXISTS public.accounts (
     id text NOT NULL,
     avatar text
 );
 
-
-CREATE TABLE public.actions (
+CREATE TABLE IF NOT EXISTS public.actions (
     id text NOT NULL,
     action_type text NOT NULL,
     entity text NOT NULL,
@@ -30,7 +18,7 @@ CREATE TABLE public.actions (
     version_id text
 );
 
-CREATE TABLE public.cursors (
+CREATE TABLE IF NOT EXISTS public.cursors (
     id integer NOT NULL,
     cursor text NOT NULL,
     block_number text
@@ -38,7 +26,7 @@ CREATE TABLE public.cursors (
 
 COMMENT ON TABLE public.cursors IS '@name substreamCursor';
 
-CREATE TABLE public.entities (
+CREATE TABLE IF NOT EXISTS public.entities (
     id text NOT NULL,
     name character varying,
     description character varying,
@@ -49,7 +37,7 @@ CREATE TABLE public.entities (
     version_id text
 );
 
-CREATE TABLE public.log_entries (
+CREATE TABLE IF NOT EXISTS public.log_entries (
     id text NOT NULL,
     created_at_block text NOT NULL,
     uri text NOT NULL,
@@ -61,7 +49,7 @@ CREATE TABLE public.log_entries (
 );
 
 
-CREATE TABLE public.proposals (
+CREATE TABLE IF NOT EXISTS public.proposals (
     id text NOT NULL,
     space text NOT NULL,
     name text,
@@ -73,7 +61,7 @@ CREATE TABLE public.proposals (
 );
 
 
-CREATE TABLE public.proposed_versions (
+CREATE TABLE IF NOT EXISTS public.proposed_versions (
     id text NOT NULL,
     name text,
     description text,
@@ -84,7 +72,7 @@ CREATE TABLE public.proposed_versions (
     proposal_id text
 );
 
-CREATE TABLE public.spaces (
+CREATE TABLE IF NOT EXISTS public.spaces (
     id text NOT NULL,
     address text NOT NULL,
     created_at_block text,
@@ -97,30 +85,30 @@ CREATE TABLE public.spaces (
 );
 
 
-CREATE TABLE public.space_admins (
+CREATE TABLE IF NOT EXISTS public.space_admins (
     space text NOT NULL,
     account text NOT NULL
 );
 
-CREATE TABLE public.space_editors (
-    space text NOT NULL,
-    account text NOT NULL
-);
-
-
-CREATE TABLE public.space_editor_controllers (
+CREATE TABLE IF NOT EXISTS public.space_editors (
     space text NOT NULL,
     account text NOT NULL
 );
 
 
-CREATE TABLE public.subspaces (
+CREATE TABLE IF NOT EXISTS public.space_editor_controllers (
+    space text NOT NULL,
+    account text NOT NULL
+);
+
+
+CREATE TABLE IF NOT EXISTS public.subspaces (
     id text NOT NULL,
     parent_space text NOT NULL,
     child_space text NOT NULL
 );
 
-CREATE TABLE public.triples (
+CREATE TABLE IF NOT EXISTS public.triples (
     id text NOT NULL,
     entity_id text NOT NULL,
     attribute_id text NOT NULL,
@@ -135,7 +123,7 @@ CREATE TABLE public.triples (
     entity_value text
 );
 
-CREATE TABLE public.versions (
+CREATE TABLE IF NOT EXISTS public.versions (
     id text NOT NULL,
     name text,
     description text,

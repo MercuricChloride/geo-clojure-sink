@@ -157,12 +157,8 @@
                                             :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
 (defn start-stream
   ([client]
-   (start-stream client 36472424 48000000))
-  ([client start-block stop-block]
    (let [channel (async/chan (async/buffer 10))]
-
      (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
-                                             :stop-block-num stop-block
                                              :start-cursor @cursor
                                              :modules (:modules spkg)
                                              :output-module "geo_out"}) channel)

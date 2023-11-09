@@ -1,14 +1,14 @@
 (ns lein-test.core
   (:gen-class)
-  (:require [lein-test.cache :refer [cached-actions cached-roles-granted
+  (:require [clojure.spec.alpha :as s]
+            [lein-test.cache :refer [cached-actions cached-roles-granted
                                      cached-roles-revoked]]
+            [lein-test.constants :refer [default-geo-start-block]]
+            [lein-test.db-helpers :refer [reset-geo-db]]
             [lein-test.populate :refer [actions->db role-granted->db
                                         role-revoked->db]]
-            [lein-test.substreams :as substreams]
-            [clojure.spec.alpha :as s]))
+            [lein-test.substreams :as substreams]))
 
-(def start-block 36472424)
-(def stop-block 48000000)
 (s/check-asserts true)
 
 
@@ -17,11 +17,17 @@
   [& args]
 
   (let [args (into #{} args)
+        reset-db (get args "--reset-db")
         from-cache (get args "--from-cache")
         reset-cursor (get args "--reset-cursor")]
+    
+    (when reset-db
+      (reset-geo-db)
+      (println "Database reset. Exiting.")
+      (System/exit 0))
 
     (when reset-cursor
-      (swap! substreams/current-block (fn [_] (str start-block)))
+      (swap! substreams/current-block (fn [_] (str default-geo-start-block)))
       (swap! substreams/cursor (fn [_] "")))
 
     (when from-cache
@@ -40,4 +46,4 @@
     (while (not from-cache)
       (println "from-stream block #" (str @substreams/current-block))
       (let [client (substreams/spawn-client)]
-        (substreams/start-stream client start-block stop-block)))))
+        (substreams/start-stream client)))))

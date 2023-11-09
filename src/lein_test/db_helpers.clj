@@ -3,8 +3,8 @@
             [dotenv :refer [env]]
             [honey.sql :as sql]
             [honey.sql.helpers :as h]
-            [lein-test.constants :refer [ATTRIBUTES ENTITIES
-                                         ROOT-SPACE-ADDRESS]]
+            [lein-test.constants :refer [ATTRIBUTES default-geo-start-block
+                                         ENTITIES ROOT-SPACE-ADDRESS]]
             [lein-test.tables :refer [generate-triple-id]]
             [next.jdbc :as jdbc]
             [next.jdbc.connection :as connection])
@@ -168,7 +168,7 @@
   []
   ;; creates the entities
   (jdbc/execute! ds (-> (h/insert-into :public/cursors)
-                        (h/values [{:id 0 :cursor "" :block-number 0}])
+                        (h/values [{:id 0 :cursor "" :block-number default-geo-start-block}])
                         (sql/format)))
 
   (jdbc/execute! ds (-> (h/insert-into :public/entities)
@@ -231,10 +231,10 @@
       (sql/format)
       try-execute))
 
-(defn reset-db
+(defn reset-geo-db
  []
  (nuke-db)
  (bootstrap-db)
- (bootstrap-entities))
+ (bootstrap-entities)
+  )
 
-(reset-db)
