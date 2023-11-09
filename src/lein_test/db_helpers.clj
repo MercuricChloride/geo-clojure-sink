@@ -6,8 +6,9 @@
             [lein-test.constants :refer [ATTRIBUTES default-geo-start-block
                                          ENTITIES ROOT-SPACE-ADDRESS]]
             [lein-test.tables :refer [generate-triple-id]]
-            [next.jdbc :as jdbc])
-  (:import (com.zaxxer.hikari HikariConfig HikariDataSource)))
+            [next.jdbc :as jdbc]
+            [next.jdbc.connection :as connection])
+  (:import (com.zaxxer.hikari HikariDataSource)))
 
 
 (def jdbc-url
@@ -28,10 +29,12 @@
 ;;                            {:dbtype "postgres" :uri (env "DATABASE_URL") :maximumPoolSize 10
 ;;                             :dataSourceProperties {:socketTimeout 30}}))
 
-(def ds 
-  (let [config (HikariConfig.)]
-    (.setJdbcUrl config jdbc-url)
-    (HikariDataSource. config)))
+
+
+(def ds (connection/->pool HikariDataSource
+                           {:dbtype "postgres" :dbname (env "PGDATABASE") :host (env "PGHOST") :port (env "PGPORT") :username (env "PGUSER") :password (env "PGPASSWORD") :maximumPoolSize 10
+                            :dataSourceProperties {:socketTimeout 30}}))
+
 
 (defn try-execute [query]
   (try
