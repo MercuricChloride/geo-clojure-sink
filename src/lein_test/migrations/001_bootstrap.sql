@@ -1,6 +1,5 @@
 CREATE TABLE IF NOT EXISTS public.accounts (
     id text NOT NULL,
-    avatar text
 );
 
 CREATE TABLE IF NOT EXISTS public.actions (

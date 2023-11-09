@@ -12,7 +12,7 @@ pom.xml.asc
 .hg/
 action_cache.zip
 action_cache/
-new-cache/
+cache/
 .clj-kondo/
 .lsp/
 .DS_Store

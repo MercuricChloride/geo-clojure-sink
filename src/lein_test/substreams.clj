@@ -6,6 +6,8 @@
             [dotenv :refer [env]]
             [geo.clojure.sink :as geo]
             [lein-test.cache :refer [format+filter-actions]]
+            [lein-test.constants :refer [cache-action-path cache-entry-path
+                                         cache-granted-path cache-revoked-path]]
             [lein-test.db-helpers :refer [get-cursor update-cursor]]
             [lein-test.populate :refer [actions->db role-granted->db
                                         role-revoked->db]]
@@ -79,21 +81,18 @@
   (let [entries (:entries geo-output)
         roles-granted (:roles-granted geo-output)
         roles-revoked (:roles-revoked geo-output)
-        entry-path "new-cache/entries-added/"
-        granted-path "new-cache/roles-granted/"
-        revoked-path "new-cache/roles-revoked/"
-        action-path "new-cache/actions/"]
+        ]
     (doseq [entry entries]
       (let [entry-filename (format-entry-filename entry)]
-        (write-file (str entry-path entry-filename) (protojure/->pb entry))
-        (when (not (file-exists? (str action-path entry-filename)))
-          (spit (str action-path entry-filename) (uri-data (:uri entry))))))
+        (write-file (str cache-entry-path entry-filename) (protojure/->pb entry))
+        (when (not (file-exists? (str cache-action-path entry-filename)))
+          (spit (str cache-action-path entry-filename) (uri-data (:uri entry))))))
     (doseq [entry roles-granted]
       (when (not (= :null (:role entry)))
-        (write-file (str granted-path (:id entry)) (protojure/->pb entry))))
+        (write-file (str cache-granted-path (:id entry)) (protojure/->pb entry))))
     (doseq [entry roles-revoked]
       (when (not (= :null (:role entry)))
-        (write-file (str revoked-path (:id entry)) (protojure/->pb entry))))))
+        (write-file (str cache-revoked-path (:id entry)) (protojure/->pb entry))))))
 
 (defmethod process-geo-data :populate-db
   [geo-output _]
@@ -101,6 +100,7 @@
   (let [entries (:entries geo-output),
         roles-granted (:roles-granted geo-output)
         roles-revoked (:roles-revoked geo-output)]
+        (println entries)
     (doseq [entry entries]
       (let [block-number (Integer/parseInt @current-block)
             author (:author entry)

@@ -1,6 +1,5 @@
 (ns lein-test.utils
-  (:require
-   [clojure.java.io :as io])
+  (:require [clojure.java.io :as io :refer [make-parents]])
   (:import java.util.Base64))
 
 (defn slurp-bytes
@@ -12,6 +11,8 @@
     (.toByteArray out)))
 
 (defn write-file [path input]
+  (println "PATH:" path)
+  (make-parents path)
   (with-open [o (io/output-stream path)]
     (.write o input)))
 

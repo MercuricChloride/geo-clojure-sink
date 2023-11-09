@@ -42,22 +42,22 @@
      :filename filename}))
 
 
-(def cached-roles-granted (->> (io/file "./new-cache/roles-granted/")
+(def cached-roles-granted (->> (io/file "./cache/roles-granted/")
                            file-seq
                            rest
                            (map #(geo/pb->RoleGranted (slurp-bytes %)))
                            (filter #(not (= (:role %) :null)))))
 
-(def cached-roles-revoked (->> (io/file "./new-cache/roles-revoked/")
+(def cached-roles-revoked (->> (io/file "./cache/roles-revoked/")
                                file-seq
                                rest
                                (map #(geo/pb->RoleRevoked (slurp-bytes %)))
                                (filter #(not (= (:role %) :null)))))
 
-(def cached-actions (->> (io/file "./new-cache/actions/")
+(def cached-actions (->> (io/file "./cache/actions/")
                          file-seq
                          rest
-                         (map #(string/replace % #"./new-cache/actions/" ""))
+                         (map #(string/replace % #"./cache/actions/" ""))
                          (map extract-file-meta)
                          sort-files
-                         (map #(json->actions "./new-cache/actions/" (:filename %) (:space %) (:author %) (:block %)))))
+                         (map #(json->actions "./cache/actions/" (:filename %) (:space %) (:author %) (:block %)))))

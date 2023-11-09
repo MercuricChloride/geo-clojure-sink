@@ -86,3 +86,10 @@
 (def ROOT-SPACE-ADDRESS "0x170b749413328ac9a94762031a7a05b00c1d2e34")
 
 (def default-geo-start-block 36472424)
+
+(def cache-entry-path "cache/entries-added/")
+(def cache-granted-path "cache/roles-granted/")
+(def cache-revoked-path "cache/roles-revoked/")
+(def cache-action-path "cache/actions/")
+
+
