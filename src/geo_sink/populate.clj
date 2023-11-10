@@ -3,6 +3,7 @@
             [geo-sink.access-control :refer [add-role remove-role]]
             [geo-sink.constants :refer [ATTRIBUTES ENTITIES]]
             [geo-sink.db-helpers :refer [try-execute]]
+            [geo-sink.functions :refer [populate-pg-functions]]
             [geo-sink.spec.action :as action-spec]
             [geo-sink.tables :refer [->action ->entity ->spaces ->triple]]
             [honey.sql :as sql]
@@ -172,11 +173,11 @@
   [actions]
   (s/assert ::action-spec/triples-with-proposal-names actions)
   (let [account (:author (first actions))]
-      (-> (h/insert-into :public/accounts)
-          (h/values [{:id account}])
-          (h/on-conflict :id (h/do-nothing))
-          sql/format
-          try-execute)))
+    (-> (h/insert-into :public/accounts)
+        (h/values [{:id account}])
+        (h/on-conflict :id (h/do-nothing))
+        sql/format
+        try-execute)))
 
 (defn actions->db
   [actions]
@@ -192,7 +193,9 @@
   (println "Populating columns...")
   (populate-columns actions)
   (println "Populating proposals...")
-  (populate-proposals actions))
+  (populate-proposals actions)
+  (println "Populating functions")
+  (populate-pg-functions))
 
 (defn role-granted->db [role]
   (add-role role))

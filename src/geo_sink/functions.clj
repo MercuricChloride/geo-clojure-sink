@@ -1,9 +1,9 @@
-(ns geo-sink.pg-function-helpers
+(ns geo-sink.functions
   (:require [clojure.string :as s]
-            [honey.sql :as sql]
             [geo-sink.constants :refer [ATTRIBUTES ENTITIES]]
             [geo-sink.db-helpers :refer [get-all-attribute-entities
-                                          get-all-type-entities try-execute]]))
+                                         get-all-type-entities try-execute]]
+            [honey.sql :as sql]))
 
 (def type-id (str (:id (:type ATTRIBUTES))))
 (def attribute-id (str (:id (:attribute ATTRIBUTES))))
@@ -311,9 +311,9 @@ CREATE TYPE attribute_with_relation_value_type AS (
   (let [value-types (map #(classify-attribute-value-type (:entities/attribute_value_type_id %)) entities)
         attribute-ids (map #(str (:entities/id %)) entities)
         all-relations? (every? #(= "relation" %) value-types)
-        all-scalar? (every? #(= "scalar" %) value-types)] 
+        all-scalar? (every? #(= "scalar" %) value-types)]
 
-    
+
     (println name value-types)
 
     (cond
@@ -330,10 +330,6 @@ CREATE TYPE attribute_with_relation_value_type AS (
 (defn try-execute-raw-sql [raw-sql]
   (try-execute (sql/format [:raw raw-sql])))
 
-
-
-
-
 (defn populate-pg-functions
   "Prepares some type and schema GraphQL queries for Postgraphile"
   []
@@ -345,12 +341,11 @@ CREATE TYPE attribute_with_relation_value_type AS (
   (try-execute-raw-sql (fn-parsed-attribute-values))
 
   (let [type-entities (->> (get-all-type-entities)
-                                (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
-                                (into {}))]
+                           (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))
+                           (into {}))]
     (doseq [[name entities] type-entities]
       (when (and (not (nil? name)) (not (= "" name)))
-        (try-execute-raw-sql (entity->type-fn name (map :entities/id entities))))
-      ))
+        (try-execute-raw-sql (entity->type-fn name (map :entities/id entities))))))
 
   (let [attribute-entities (->> (get-all-attribute-entities)
                                 (group-by (fn [entity] (parse-pg-fn-name (:entities/name entity))))

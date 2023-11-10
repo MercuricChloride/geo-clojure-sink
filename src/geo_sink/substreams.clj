@@ -22,7 +22,6 @@
             [sf.substreams.v1 :as v1]))
 (def current-block (atom (:cursors/block_number (get-cursor))))
 (def cursor (atom (:cursors/cursor (get-cursor))))
-(def sink-mode (atom :populate-cache))
 
 (defn file-exists? [filepath]
   (.exists (java.io.File. filepath)))
@@ -128,7 +127,7 @@
 
     (doseq [role roles-revoked]
       (when (not (= :null (:role role)))
-        (print "Harkonnen Forces")
+        (println "Harkonnen Forces")
         (role-revoked->db role)))))
 
 
@@ -140,7 +139,8 @@
                                             :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
 
 (defn handle-block-scoped-data
-  [data populate-cache]
+  [populate-cache data]
+
   (try
     (let [message (:message data)
           block-data (:block-scoped-data message)

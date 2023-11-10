@@ -1,7 +1,7 @@
 (ns geo-sink.access-control
-  (:require [honey.sql :as sql]
-            [honey.sql.helpers :as h]
-            [geo-sink.db-helpers :refer [try-execute]]))
+  (:require [geo-sink.db-helpers :refer [try-execute]]
+            [honey.sql :as sql]
+            [honey.sql.helpers :as h]))
 (def ADMIN_ROLE :admin)
 (def MEMBER_ROLE :member)
 (def MODERATOR_ROLE :moderator)
@@ -41,6 +41,10 @@
       (sql/format)
       try-execute))
 
+(defmethod role->db :unknown
+  [role-added]
+  (println "Skipping unknown role added"))
+
 (defmulti remove-role->db role-kind)
 
 (defmethod remove-role->db :admin
@@ -66,6 +70,10 @@
                 :account (:account role-removed)})
       (sql/format)
       try-execute))
+
+(defmethod remove-role->db :unknown
+  [role-removed]
+  (println "Skipping unknown role removed"))
 
 (defn add-role [role-added]
   (role->db role-added))

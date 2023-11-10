@@ -30,7 +30,7 @@
         (when (not (env env-var))
           (throw (Exception. (str "Environment variable " env-var " is not defined"))))))
 
-      ;; Create required cache directories
+    ;; Create required cache directories
     (doseq [path [cache-entry-directory cache-granted-directory cache-revoked-directory cache-action-directory]]
       (when-not (.exists (java.io.File. path))
         (.mkdirs (java.io.File. path))))
@@ -58,14 +58,24 @@
                   "Actions: " (apply + (map count cached-actions)) "\n"
                   "Roles granted: " (apply + (map count cached-roles-granted)) "\n"
                   "Roles revoked: " (apply + (map count cached-roles-revoked)) "\n"))
+        
+        (println "Handling cached actions...")
         (doseq [actions cached-actions]
           (actions->db actions))
+        (println "Done handling cached actions.")
+
+        (println "Handling cached roles...")
         (doseq [roles cached-roles-granted]
           (doseq [role roles]
             (role-granted->db role)))
+        (println "Done handling cached roles.")
+
+        (println "Handling cached roles revoked...")
         (doseq [roles cached-roles-revoked]
           (doseq [role roles]
             (role-revoked->db role)))
+        (println "Done handling cached roles revoked.")
+        
         (update-db-cursor (:cursor cursor-cache) (:block-number cursor-cache))
         (println "Done syncing cache with database.")))
 
