@@ -11,9 +11,7 @@
   ([actions]
    (filter #(action/valid-action? %) actions))
   ([space author block-number proposal-name actions]
-   (println "space:" space)
-   (println "author:" author)
-   (println "block-number:" block-number)
+   (println (str "Preparing " (count actions) " actions for space: " space ", author: " author ", block-number: " block-number))
    (->> (filter #(action/valid-action? %) actions)
         (map #(assoc % :space space :author author :block-number block-number :proposal-name proposal-name)))))
 
@@ -44,7 +42,9 @@
 
 
 (defn write-cursor-cache-file [cursor block-number]
-  (write-file cache-cursor-file (str "{\"block_number\": \"" block-number "\", \"cursor\": \"" cursor "\"}")))
+  (println (str "Writing cursor cache file with block number: " block-number " and cursor: " cursor))
+  ;; (write-file (str cache-cursor-file) (str "{\"block_number\": \"" block-number "\", \"cursor\": \"" cursor "\"}"))
+  )
 
 (defn read-cursor-cache-file []
   (let [cache-content (ch/parse-string (slurp cache-cursor-file) true)]

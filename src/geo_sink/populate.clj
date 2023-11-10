@@ -1,12 +1,12 @@
 (ns geo-sink.populate
-  (:require [honey.sql :as sql]
-            [honey.sql.helpers :as h]
-            [geo-sink.spec.action :as action-spec]
-            [clojure.spec.alpha :as s]
+  (:require [clojure.spec.alpha :as s]
             [geo-sink.access-control :refer [add-role remove-role]]
             [geo-sink.constants :refer [ATTRIBUTES ENTITIES]]
             [geo-sink.db-helpers :refer [try-execute]]
-            [geo-sink.tables :refer [->action ->entity ->spaces ->triple]]))
+            [geo-sink.spec.action :as action-spec]
+            [geo-sink.tables :refer [->action ->entity ->spaces ->triple]]
+            [honey.sql :as sql]
+            [honey.sql.helpers :as h]))
 
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
@@ -181,17 +181,17 @@
 (defn actions->db
   [actions]
   (s/assert ::action-spec/triples-with-proposal-names actions)
-  (println "populating entities")
+  (println "Populating entities...")
   (populate-entities actions)
-  (println "populating triples")
+  (println "Populating triples...")
   (populate-triples actions)
-  (println "populating accounts")
+  (println "Populating accounts...")
   (populate-account actions)
-  (println "populating spaces")
+  (println "Populating spaces...")
   (populate-spaces actions)
-  (println "populating columns")
+  (println "Populating columns...")
   (populate-columns actions)
-  (println "populating proposals")
+  (println "Populating proposals...")
   (populate-proposals actions))
 
 (defn role-granted->db [role]

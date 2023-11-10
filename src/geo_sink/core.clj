@@ -32,8 +32,9 @@
 
     ;; --reset-db flag to clear and bootstrap the database with some fundamental entities
     (when reset-db
-      (println "Resetting database. Exiting...")
+      (println "Resetting database...")
       (reset-geo-db)
+      (println "Done resetting database. Exiting...")
       (System/exit 0))
 
       ;; Create required cache directories
@@ -49,11 +50,12 @@
     (when reset-cursor
       (println "Resetting cursor to geo genesis start block")
       (swap! substreams/current-block (fn [_] (str geo-genesis-start-block)))
-      (swap! substreams/cursor (fn [_] "")))
+      (swap! substreams/cursor (fn [_] ""))
+      (println "Done resetting cursor. Proceeding..."))
 
     ;; --from-cache flag to populate the database from the cache
     (when from-cache
-      (println "Syncing actions and roles from cache...")
+      (println "Syncing cache with database...")
       (doseq [actions cached-actions]
         (actions->db actions))
       (doseq [roles cached-roles-granted]
@@ -62,15 +64,15 @@
       (doseq [roles cached-roles-revoked]
         (doseq [role roles]
           (role-revoked->db role)))
-      
+
       (let [cursor-cache (read-cursor-cache-file)]
         (update-db-cursor (:cursor cursor-cache) (:block-number cursor-cache)))
 
-      (println "Done syncing from cache. Exiting..."))
+      (println "Done syncing cache with database. Exiting..."))
 
 
     ;; Start streaming the substreams client and populating the cache when --from-cache is not set (TODO: Explore auto-streaming after cache is populated)
     (while (not from-cache)
-      (println "from-stream block #" (str @substreams/current-block))
+      (println "Streaming block #" (str @substreams/current-block))
       (let [client (substreams/spawn-client)]
         (substreams/start-stream client)))))

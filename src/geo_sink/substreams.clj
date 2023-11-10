@@ -20,7 +20,6 @@
             [sf.substreams.rpc.v2 :as rpc]
             [sf.substreams.rpc.v2.Stream.client :as stream]
             [sf.substreams.v1 :as v1]))
-
 (def current-block (atom (:cursors/block_number (get-cursor))))
 (def cursor (atom (:cursors/cursor (get-cursor))))
 (def sink-mode (atom :populate-cache))
@@ -28,12 +27,16 @@
 (defn file-exists? [filepath]
   (.exists (java.io.File. filepath)))
 
+
+
+(defn handle-cursor-change [new-cursor-string current-block]
+  (update-db-cursor new-cursor-string current-block)
+  (write-cursor-cache-file new-cursor-string current-block))
+
 (defn cursor-watcher
   "Watches the cursor for changes and updates the database as well as the cache file"
   [key ref old-cursor-string new-cursor-string]
-  (update-db-cursor new-cursor-string @current-block)
-  (write-cursor-cache-file new-cursor-string @current-block)
-  )
+  (handle-cursor-change new-cursor-string @current-block))
 (add-watch cursor :watcher cursor-watcher)
 
 (defn take-all [ch f]
