@@ -43,8 +43,13 @@
      :filename filename}))
 
 
-(defn write-cursor-cache-file [block-number cursor]
+(defn write-cursor-cache-file [cursor block-number]
   (write-file cache-cursor-file (str "{\"block_number\": \"" block-number "\", \"cursor\": \"" cursor "\"}")))
+
+(defn read-cursor-cache-file []
+  (let [cache-content (ch/parse-string (slurp cache-cursor-file) true)]
+    {:block-number (:block_number cache-content)
+     :cursor (:cursor cache-content)}))
 
 
 

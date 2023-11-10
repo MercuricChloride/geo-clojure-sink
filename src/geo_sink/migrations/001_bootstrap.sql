@@ -1,5 +1,5 @@
 CREATE TABLE IF NOT EXISTS public.accounts (
-    id text NOT NULL,
+    id text NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS public.actions (

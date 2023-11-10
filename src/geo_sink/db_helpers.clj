@@ -30,14 +30,14 @@
       try-execute))
 
 (defn get-cursor
- []
- (-> (h/select :cursor :block-number)
-     (h/from :public/cursors)
-     (h/where [:= :id 0])
-     (sql/format)
-     try-execute
-     first))
-     
+  []
+  (-> (h/select :cursor :block-number)
+      (h/from :public/cursors)
+      (h/where [:= :id 0])
+      (sql/format)
+      try-execute
+      first))
+
 
 (defn- all-types
   "Returns a seq of all types in the triple store"
@@ -91,7 +91,7 @@
                    (h/where [:= :is_type true])
                    (sql/format {:pretty true}))))
 
-(defn get-all-attribute-entities  
+(defn get-all-attribute-entities
   "Gets all rows from :public/entities where is_attribute is true"
   []
   (try-execute (-> (h/select [:*])
@@ -159,10 +159,10 @@
 
 
 (defn nuke-db []
-  (jdbc/execute! ds (sql/format [:raw (slurp "src/lein_test/sql/nuke.sql")])))
+  (jdbc/execute! ds (sql/format [:raw (slurp "./src/geo_sink/sql/nuke.sql")])))
 
 (defn bootstrap-db []
-  (jdbc/execute! ds (sql/format [:raw (slurp "./src/lein_test/migrations/001_bootstrap.sql")]))) 
+  (jdbc/execute! ds (sql/format [:raw (slurp "./src/geo_sink/migrations/001_bootstrap.sql")])))
 
 (defn bootstrap-entities
   []
@@ -232,9 +232,11 @@
       try-execute))
 
 (defn reset-geo-db
- []
- (nuke-db)
- (bootstrap-db)
- (bootstrap-entities)
-  )
+  []
+  (println "Nuking db...")
+  (nuke-db)
+  (println "Bootstrapping db schema...")
+  (bootstrap-db)
+  (println "Bootstrapping initial entities...")
+  (bootstrap-entities))
 
