@@ -1,3 +1,6 @@
+-- 
+-- CREATE TABLE Statements for the GeoSink Database
+--
 CREATE TABLE IF NOT EXISTS public.accounts (
     id text NOT NULL
 );
@@ -133,6 +136,9 @@ CREATE TABLE IF NOT EXISTS public.versions (
     entity_id text
 );
 
+-- 
+-- Primary Key + Foreign Key Constraints
+--
 ALTER TABLE ONLY public.accounts
     ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);
 
@@ -187,7 +193,6 @@ ALTER TABLE ONLY public.actions
 ALTER TABLE ONLY public.actions
     ADD CONSTRAINT actions_version_in_actions_fkey FOREIGN KEY (version_id) REFERENCES public.versions(id);
 
-
 ALTER TABLE ONLY public.entities
     ADD CONSTRAINT entity_defined_in_spaces_address_fkey FOREIGN KEY (defined_in) REFERENCES public.spaces(address);
 
@@ -236,7 +241,9 @@ ALTER TABLE public.space_editors
 ALTER TABLE public.space_editor_controllers
     ADD CONSTRAINT space_editor_controllers_space_to_address FOREIGN KEY (space) REFERENCES public.spaces(address);
 
--- Disable All Triggers so we can play fast and loose with foreign keys
+-- 
+-- Disable Foreign Key Constraints to allow for bulk loading + unordered inserts
+-- 
 ALTER TABLE public.accounts DISABLE TRIGGER ALL;
 ALTER TABLE public.actions DISABLE TRIGGER ALL;
 ALTER TABLE public.entities DISABLE TRIGGER ALL;
@@ -251,5 +258,129 @@ ALTER TABLE public.space_admins DISABLE TRIGGER ALL;
 ALTER TABLE public.space_editors DISABLE TRIGGER ALL;
 ALTER TABLE public.space_editor_controllers DISABLE TRIGGER ALL;
 
+-- 
+-- Create Indexes for Speedy Querying
+-- 
 CREATE INDEX idx_entity_attribute ON public.triples(entity_id, attribute_id);
 CREATE INDEX idx_entity_attribute_value_id ON public.triples(entity_id, attribute_id, value_id);
+
+-- 
+-- Custom Postgraphile Query Results for Attribute Functions
+-- 
+CREATE TYPE public.attribute_with_scalar_value_type AS (
+    type text,
+    value text
+);
+
+CREATE TYPE public.attribute_with_relation_value_type AS (
+    type text, 
+    entity_value_id text 
+);
+   
+CREATE TYPE public.attribute_with_unknown_value_type AS (
+   type text,
+   value text,
+   entity_value_id text 
+);
+
+COMMENT ON TYPE public.attribute_with_relation_value_type IS
+  E'@foreignKey (entity_value_id) references public.entities (id)';
+
+   
+COMMENT ON TYPE public.attribute_with_unknown_value_type IS
+  E'@foreignKey (entity_value_id) references public.entities (id)';
+
+--
+-- Postgraphile function and types section
+-- Note that attribute_id is hardcoded to '01412f83-8189-4ab1-8365-65c7fd358cc1' and type_id is 'type'
+--
+
+-- 
+-- Query "types" on entities to get the types of an entity or "typeCount" to get the number of types
+-- "typeCount" can be used for filtering 
+-- 
+CREATE FUNCTION public.entities_types(e_row entities)
+RETURNS SETOF public.entities AS $$
+BEGIN
+    RETURN QUERY
+    SELECT e.*
+    FROM entities e
+    WHERE e.id IN (
+        SELECT t.value_id
+        FROM triples t
+        WHERE t.entity_id = e_row.id 
+        AND t.attribute_id = '01412f83-8189-4ab1-8365-65c7fd358cc1' 
+    );
+END;
+$$ LANGUAGE plpgsql STRICT STABLE;  
+
+CREATE FUNCTION public.entities_types_count(e_row entities)
+RETURNS integer AS $$
+DECLARE
+    type_count integer;
+BEGIN
+    SELECT count(*)
+    INTO type_count
+    FROM entities_types(e_row);
+    RETURN type_count;
+END;
+$$ LANGUAGE plpgsql STRICT STABLE;    
+
+-- 
+-- Query "typeSchema" on a type entity (e.g. Place) to get it's attributes
+-- "typeSchemaCount" can be used for filtering
+--
+CREATE FUNCTION public.entities_type_schema(e_row entities)
+RETURNS SETOF public.entities AS $$
+BEGIN
+    RETURN QUERY
+    SELECT e.*
+    FROM entities e
+    WHERE e.id IN (
+        SELECT t.value_id
+        FROM triples t
+        WHERE t.entity_id = e_row.id
+        AND t.attribute_id = '01412f83-8189-4ab1-8365-65c7fd358cc1'
+    );
+END;
+$$ LANGUAGE plpgsql STRICT STABLE;
+
+CREATE FUNCTION public.entities_type_schema_count(e_row entities)
+RETURNS integer AS $$
+DECLARE
+    attribute_count integer;
+BEGIN
+    SELECT count(*)
+    INTO attribute_count
+    FROM entities_type_schema(e_row);
+    RETURN attribute_count;
+END;
+$$ LANGUAGE plpgsql STRICT STABLE;
+
+-- 
+-- Query "schema" on an instance of a type entity (e.g. San Francisco) to get it's inferred type attributes
+--
+CREATE FUNCTION entities_schema(e_row entities)
+RETURNS SETOF public.entities AS $$
+BEGIN
+    -- Using CTE to first fetch all types of the given entity
+    RETURN QUERY 
+    WITH entity_types AS (
+        SELECT t.value_id AS type_id
+        FROM triples t
+        WHERE t.entity_id = e_row.id 
+        AND t.attribute_id = 'type'
+    ),
+    type_attributes AS (
+        -- For each type, fetch the associated attributes
+        SELECT DISTINCT t.value_id AS attribute_id
+        FROM entity_types et
+        JOIN triples t ON t.entity_id = et.type_id 
+        AND t.attribute_id = '01412f83-8189-4ab1-8365-65c7fd358cc1' 
+
+    )
+    SELECT e.*
+    FROM entities e
+    JOIN type_attributes ta ON e.id = ta.attribute_id;
+END;
+$$ LANGUAGE plpgsql STRICT STABLE;
