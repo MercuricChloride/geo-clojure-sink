@@ -1,5 +1,6 @@
 (ns geo-sink.utils
-  (:require [clojure.java.io :as io :refer [make-parents]])
+  (:require [clojure.java.io :as io]
+            [geo-sink.constants :refer [cache-cursor-file]])
   (:import java.util.Base64))
 
 (defn slurp-bytes
@@ -11,10 +12,12 @@
     (.toByteArray out)))
 
 (defn write-file [path input]
-  (println "PATH:" path)
-  (make-parents path)
   (with-open [o (io/output-stream path)]
     (.write o input)))
+
+(defn write-cursor-cache-file [block-number cursor]
+  (write-file cache-cursor-file (str "{\"block_number\": \"" block-number "\", \"cursor\": \"" cursor "\"}")))
+
 
 (defn ipfs-fetch
   ([cid]
@@ -24,7 +27,7 @@
    (ipfs-fetch cid 0 max-failures))
   ([cid retry-count max-failures]
    (when (= retry-count max-failures)
-    (throw (Exception. "Failed to fetch the cid from ipfs too many times")))
+     (throw (Exception. "Failed to fetch the cid from ipfs too many times")))
    (try
      (ipfs-fetch cid)
      (catch java.io.IOException e

@@ -1,11 +1,11 @@
 (ns geo-sink.db-helpers
   (:require [clojure.string]
             [dotenv :refer [env]]
+            [geo-sink.constants :refer [ATTRIBUTES ENTITIES
+                                        geo-genesis-start-block ROOT-SPACE-ADDRESS]]
+            [geo-sink.tables :refer [generate-triple-id]]
             [honey.sql :as sql]
             [honey.sql.helpers :as h]
-            [geo-sink.constants :refer [ATTRIBUTES default-geo-start-block
-                                         ENTITIES ROOT-SPACE-ADDRESS]]
-            [geo-sink.tables :refer [generate-triple-id]]
             [next.jdbc :as jdbc]
             [next.jdbc.connection :as connection])
   (:import (com.zaxxer.hikari HikariDataSource)))
@@ -21,7 +21,7 @@
     (catch Exception e
       (println e "Failed to execute query!" query))))
 
-(defn update-cursor
+(defn update-db-cursor
   [cursor-string block-number]
   (-> (h/insert-into :public/cursors)
       (h/values [{:id 0 :cursor cursor-string :block-number block-number}])
@@ -168,7 +168,7 @@
   []
   ;; creates the entities
   (jdbc/execute! ds (-> (h/insert-into :public/cursors)
-                        (h/values [{:id 0 :cursor "" :block-number default-geo-start-block}])
+                        (h/values [{:id 0 :cursor "" :block-number geo-genesis-start-block}])
                         (sql/format)))
 
   (jdbc/execute! ds (-> (h/insert-into :public/entities)

@@ -3,14 +3,15 @@
   (:require [clojure.spec.alpha :as s]
             [dotenv :refer [env]]
             [geo-sink.cache :refer [cached-actions cached-roles-granted
-                                     cached-roles-revoked]]
-            [geo-sink.constants :refer [cache-action-path cache-entry-path
-                                         cache-granted-path cache-revoked-path
-                                         default-geo-start-block]]
+                                    cached-roles-revoked]]
+            [geo-sink.constants :refer [cache-action-directory
+                                        cache-cursor-file cache-entry-directory
+                                        cache-granted-directory cache-revoked-directory geo-genesis-start-block]]
             [geo-sink.db-helpers :refer [reset-geo-db]]
             [geo-sink.populate :refer [actions->db role-granted->db
-                                        role-revoked->db]]
-            [geo-sink.substreams :as substreams]))
+                                       role-revoked->db]]
+            [geo-sink.substreams :as substreams]
+            [geo-sink.utils :refer [write-cursor-cache-file]]))
 
 (s/check-asserts true)
 
@@ -30,34 +31,42 @@
         (when (not (env env-var))
           (throw (Exception. (str "Environment variable " env-var " is not defined"))))))
     
+
     ;; Create required cache directories
-    (doseq [path [cache-entry-path cache-granted-path cache-revoked-path cache-action-path]]
+    (doseq [path [cache-entry-directory cache-granted-directory cache-revoked-directory cache-action-directory]]
       (when-not (.exists (java.io.File. path))
         (.mkdirs (java.io.File. path))))
+    
+    ;; Create required cache file
+    (when-not (.exists (java.io.File. cache-cursor-file))
+      (write-cursor-cache-file geo-genesis-start-block "")
+    )
 
     ;; --reset-db flag to clear and bootstrap the database with some fundamental entities
     (when reset-db
+      (println "Resetting database. Exiting...")
       (reset-geo-db)
-      (println "Database reset. Exiting.")
       (System/exit 0))
 
     ;; --reset-cursor flag to reset the cursor to the default start block
     (when reset-cursor
-      (swap! substreams/current-block (fn [_] (str default-geo-start-block)))
+      (println "Resetting cursor to geo genesis start block")
+      (swap! substreams/current-block (fn [_] (str geo-genesis-start-block)))
       (swap! substreams/cursor (fn [_] "")))
 
     ;; --from-cache flag to populate the database from the cache
     (when from-cache
-      (println "from-cache")
+      (println "Syncing actions and roles from cache...")
       (doseq [actions cached-actions]
         (actions->db actions))
       (doseq [roles cached-roles-granted]
         (doseq [role roles]
           (role-granted->db role)))
-
       (doseq [roles cached-roles-revoked]
         (doseq [role roles]
-          (role-revoked->db role))))
+          (role-revoked->db role)))
+      (println "Done syncing from cache. Exiting...") 
+      )
 
 
     ;; Start streaming the substreams client and populating the cache when --from-cache is not set (TODO: Explore auto-streaming after cache is populated)

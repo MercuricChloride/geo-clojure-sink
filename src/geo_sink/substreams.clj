@@ -4,15 +4,16 @@
             [clojure.core.async :as async]
             [clojure.string :as string]
             [dotenv :refer [env]]
-            [geo.clojure.sink :as geo]
             [geo-sink.cache :refer [format+filter-actions]]
-            [geo-sink.constants :refer [cache-action-path cache-entry-path
-                                         cache-granted-path cache-revoked-path]]
-            [geo-sink.db-helpers :refer [get-cursor update-cursor]]
+            [geo-sink.constants :refer [cache-action-directory
+                                        cache-entry-directory cache-granted-directory
+                                        cache-revoked-directory]]
+            [geo-sink.db-helpers :refer [get-cursor update-db-cursor]]
             [geo-sink.populate :refer [actions->db role-granted->db
-                                        role-revoked->db]]
+                                       role-revoked->db]]
             [geo-sink.utils :refer [decode-base64 ipfs-fetch slurp-bytes
-                                     write-file]]
+                                    write-cursor-cache-file write-file]]
+            [geo.clojure.sink :as geo]
             [protojure.grpc.client.providers.http2 :as grpc.http2]
             [protojure.protobuf :as protojure]
             [sf.substreams.rpc.v2 :as rpc]
@@ -27,9 +28,11 @@
   (.exists (java.io.File. filepath)))
 
 (defn cursor-watcher
-  "Watches the cursor for changes and updates the database"
-  [key ref old-state new-state]
-  (update-cursor new-state @current-block))
+  "Watches the cursor for changes and updates the database as well as the cache file"
+  [key ref old-cursor-string new-cursor-string]
+  (update-db-cursor new-cursor-string @current-block)
+  (write-cursor-cache-file new-cursor-string @current-block)
+  )
 (add-watch cursor :watcher cursor-watcher)
 
 (defn take-all [ch f]
@@ -80,19 +83,19 @@
   [geo-output _]
   (let [entries (:entries geo-output)
         roles-granted (:roles-granted geo-output)
-        roles-revoked (:roles-revoked geo-output)
-        ]
+        roles-revoked (:roles-revoked geo-output)]
+    (println (str "Caching -> Entries: " (count entries) ", Roles granted: " (count roles-granted) ", Roles revoked: " (count roles-revoked)))
     (doseq [entry entries]
       (let [entry-filename (format-entry-filename entry)]
-        (write-file (str cache-entry-path entry-filename) (protojure/->pb entry))
-        (when (not (file-exists? (str cache-action-path entry-filename)))
-          (spit (str cache-action-path entry-filename) (uri-data (:uri entry))))))
+        (write-file (str cache-entry-directory entry-filename) (protojure/->pb entry))
+        (when (not (file-exists? (str cache-action-directory entry-filename)))
+          (spit (str cache-action-directory entry-filename) (uri-data (:uri entry))))))
     (doseq [entry roles-granted]
       (when (not (= :null (:role entry)))
-        (write-file (str cache-granted-path (:id entry)) (protojure/->pb entry))))
+        (write-file (str cache-granted-directory (:id entry)) (protojure/->pb entry))))
     (doseq [entry roles-revoked]
       (when (not (= :null (:role entry)))
-        (write-file (str cache-revoked-path (:id entry)) (protojure/->pb entry))))))
+        (write-file (str cache-revoked-directory (:id entry)) (protojure/->pb entry))))))
 
 (defmethod process-geo-data :populate-db
   [geo-output _]
@@ -100,7 +103,7 @@
   (let [entries (:entries geo-output),
         roles-granted (:roles-granted geo-output)
         roles-revoked (:roles-revoked geo-output)]
-        (println entries)
+    (println (str "Populating -> Entries: " (count entries) ", Roles granted: " (count roles-granted) ", Roles revoked: " (count roles-revoked)))
     (doseq [entry entries]
       (let [block-number (Integer/parseInt @current-block)
             author (:author entry)
@@ -140,7 +143,6 @@
             (when (= (mod block-number 100) 0)
               (println "Empty block at: " block-number))
             (do
-              (println "Got map output at block:" block-number)
               (process-geo-data geo-output :populate-cache)
               (process-geo-data geo-output :populate-db)))
           (swap! current-block (fn [_] (str block-number)))

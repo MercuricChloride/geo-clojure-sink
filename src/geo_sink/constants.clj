@@ -85,11 +85,13 @@
 
 (def ROOT-SPACE-ADDRESS "0x170b749413328ac9a94762031a7a05b00c1d2e34")
 
-(def default-geo-start-block 36472424)
+(def geo-genesis-start-block 36472424)
 
-(def cache-entry-path "cache/entries-added/")
-(def cache-granted-path "cache/roles-granted/")
-(def cache-revoked-path "cache/roles-revoked/")
-(def cache-action-path "cache/actions/")
+(def cache-entry-directory "cache/entries-added/")
+(def cache-granted-directory "cache/roles-granted/")
+(def cache-revoked-directory "cache/roles-revoked/")
+(def cache-action-directory "cache/actions/")
+(def cache-cursor-file "cache/cursor.json")
+
 
 
