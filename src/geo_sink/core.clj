@@ -20,23 +20,16 @@
   [& args]
 
   (let [args (into #{} args)
-        reset-db (get args "--reset-db")
+        from-genesis (get args "--from-genesis")
         from-cache (get args "--from-cache")
-        reset-cursor (get args "--reset-cursor")]
+        populate-cache (get args "--populate-cache")]
 
     ;; Check for required environment variables
     (let [env-vars ["SUBSTREAMS_API_TOKEN" "SUBSTREAMS_ENDPOINT" "PGDATABASE" "PGUSER" "PGPASSWORD" "PGPORT" "PGHOST"]]
       (doseq [env-var env-vars]
         (when (not (env env-var))
           (throw (Exception. (str "Environment variable " env-var " is not defined"))))))
-
-    ;; --reset-db flag to clear and bootstrap the database with some fundamental entities
-    (when reset-db
-      (println "Resetting database...")
-      (reset-geo-db)
-      (println "Done resetting database. Exiting...")
-      (System/exit 0))
-
+    
       ;; Create required cache directories
     (doseq [path [cache-entry-directory cache-granted-directory cache-revoked-directory cache-action-directory]]
       (when-not (.exists (java.io.File. path))
@@ -46,14 +39,17 @@
     (when-not (.exists (java.io.File. cache-cursor-file))
       (write-cursor-cache-file geo-genesis-start-block ""))
 
-    ;; --reset-cursor flag to reset the cursor to the default start block
-    (when reset-cursor
-      (println "Resetting cursor to geo genesis start block")
+    ;; From genesis or cache flag to clear and bootstrap the database with some fundamental entities
+    (when (or from-genesis from-cache)
+      (println "Resetting database...")
       (swap! substreams/current-block (fn [_] (str geo-genesis-start-block)))
       (swap! substreams/cursor (fn [_] ""))
-      (println "Done resetting cursor. Proceeding..."))
+      (reset-geo-db)
+      (println "Done resetting database. Exiting...")
+      (System/exit 0))
 
-    ;; --from-cache flag to populate the database from the cache
+
+    ;; From cache flag to populate the database from the cache
     (when from-cache
       (println "Syncing cache with database...")
       (doseq [actions cached-actions]
@@ -71,8 +67,8 @@
       (println "Done syncing cache with database. Exiting..."))
 
 
-    ;; Start streaming the substreams client and populating the cache when --from-cache is not set (TODO: Explore auto-streaming after cache is populated)
-    (while (not from-cache)
+    ;; Start streaming the substreams client and populating the cache when populate-cache is true)
+    (while true
       (println "Streaming block #" (str @substreams/current-block))
       (let [client (substreams/spawn-client)]
-        (substreams/start-stream client)))))
+        (substreams/start-stream client populate-cache)))))

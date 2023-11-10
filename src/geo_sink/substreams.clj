@@ -131,8 +131,16 @@
         (print "Harkonnen Forces")
         (role-revoked->db role)))))
 
+
+(def spkg (v1/pb->Package (slurp-bytes "geo-substream-v1.0.2.spkg")))
+
+(defn spawn-client [] @(grpc.http2/connect {:uri (env "SUBSTREAMS_ENDPOINT")
+                                            :ssl true
+                                            :idle-timeout 60000
+                                            :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
+
 (defn handle-block-scoped-data
-  [data]
+  [data populate-cache]
   (try
     (let [message (:message data)
           block-data (:block-scoped-data message)
@@ -147,7 +155,8 @@
             (when (= (mod block-number 100) 0)
               (println "Empty block at: " block-number))
             (do
-              (process-geo-data geo-output :populate-cache)
+              (when populate-cache
+                (process-geo-data geo-output :populate-cache))
               (process-geo-data geo-output :populate-db)))
           (swap! current-block (fn [_] (str block-number)))
           (swap! cursor (fn [_] stream-cursor)))))
@@ -155,17 +164,12 @@
       (println "GOT ERROR: \n\n\n\n\n" e))))
 
 
-(def spkg (v1/pb->Package (slurp-bytes "geo-substream-v1.0.2.spkg")))
-
-(defn spawn-client [] @(grpc.http2/connect {:uri (env "SUBSTREAMS_ENDPOINT")
-                                            :ssl true
-                                            :idle-timeout 60000
-                                            :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
 (defn start-stream
-  ([client]
+  ([client populate-cache]
    (let [channel (async/chan (async/buffer 10))]
      (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
                                              :start-cursor @cursor
                                              :modules (:modules spkg)
                                              :output-module "geo_out"}) channel)
-     (take-all channel handle-block-scoped-data))))
+     (take-all channel (partial handle-block-scoped-data populate-cache)))))
+ 
