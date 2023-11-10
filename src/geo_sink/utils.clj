@@ -10,11 +10,9 @@
     (io/copy in out)
     (.toByteArray out)))
 
-(defn write-file [path input]
+(defn write-bytes [path input]
   (with-open [o (io/output-stream path)]
     (.write o input)))
-
-
 
 (defn ipfs-fetch
   ([cid]

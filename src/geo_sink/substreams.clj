@@ -13,7 +13,7 @@
             [geo-sink.populate :refer [actions->db role-granted->db
                                        role-revoked->db]]
             [geo-sink.utils :refer [decode-base64 ipfs-fetch slurp-bytes
-                                    write-file]]
+                                    write-bytes]]
             [geo.clojure.sink :as geo]
             [protojure.grpc.client.providers.http2 :as grpc.http2]
             [protojure.protobuf :as protojure]
@@ -91,15 +91,15 @@
     (println (str "Caching -> Entries: " (count entries) ", Roles granted: " (count roles-granted) ", Roles revoked: " (count roles-revoked)))
     (doseq [entry entries]
       (let [entry-filename (format-entry-filename entry)]
-        (write-file (str cache-entry-directory entry-filename) (protojure/->pb entry))
+        (write-bytes (str cache-entry-directory entry-filename) (protojure/->pb entry))
         (when (not (file-exists? (str cache-action-directory entry-filename)))
           (spit (str cache-action-directory entry-filename) (uri-data (:uri entry))))))
     (doseq [entry roles-granted]
       (when (not (= :null (:role entry)))
-        (write-file (str cache-granted-directory (:id entry)) (protojure/->pb entry))))
+        (write-bytes (str cache-granted-directory (:id entry)) (protojure/->pb entry))))
     (doseq [entry roles-revoked]
       (when (not (= :null (:role entry)))
-        (write-file (str cache-revoked-directory (:id entry)) (protojure/->pb entry))))))
+        (write-bytes (str cache-revoked-directory (:id entry)) (protojure/->pb entry))))))
 
 (defmethod process-geo-data :populate-db
   [geo-output _]
