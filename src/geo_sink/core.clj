@@ -3,6 +3,7 @@
   (:require [clojure.spec.alpha :as s]
             [dotenv :refer [env]]
             [geo-sink.cache :refer [cached-actions cached-roles-granted
+                                    write-cursor-cache-file
                                     cached-roles-revoked]]
             [geo-sink.constants :refer [cache-action-directory
                                         cache-cursor-file cache-entry-directory
@@ -10,8 +11,7 @@
             [geo-sink.db-helpers :refer [reset-geo-db]]
             [geo-sink.populate :refer [actions->db role-granted->db
                                        role-revoked->db]]
-            [geo-sink.substreams :as substreams]
-            [geo-sink.utils :refer [write-cursor-cache-file]]))
+            [geo-sink.substreams :as substreams]))
 
 (s/check-asserts true)
 

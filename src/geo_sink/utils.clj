@@ -1,6 +1,5 @@
 (ns geo-sink.utils
-  (:require [clojure.java.io :as io]
-            [geo-sink.constants :refer [cache-cursor-file]])
+  (:require [clojure.java.io :as io])
   (:import java.util.Base64))
 
 (defn slurp-bytes
@@ -15,8 +14,6 @@
   (with-open [o (io/output-stream path)]
     (.write o input)))
 
-(defn write-cursor-cache-file [block-number cursor]
-  (write-file cache-cursor-file (str "{\"block_number\": \"" block-number "\", \"cursor\": \"" cursor "\"}")))
 
 
 (defn ipfs-fetch

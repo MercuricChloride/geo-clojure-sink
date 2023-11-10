@@ -4,7 +4,8 @@
             [clojure.core.async :as async]
             [clojure.string :as string]
             [dotenv :refer [env]]
-            [geo-sink.cache :refer [format+filter-actions]]
+            [geo-sink.cache :refer [format+filter-actions
+                                    write-cursor-cache-file]]
             [geo-sink.constants :refer [cache-action-directory
                                         cache-entry-directory cache-granted-directory
                                         cache-revoked-directory]]
@@ -12,7 +13,7 @@
             [geo-sink.populate :refer [actions->db role-granted->db
                                        role-revoked->db]]
             [geo-sink.utils :refer [decode-base64 ipfs-fetch slurp-bytes
-                                    write-cursor-cache-file write-file]]
+                                    write-file]]
             [geo.clojure.sink :as geo]
             [protojure.grpc.client.providers.http2 :as grpc.http2]
             [protojure.protobuf :as protojure]

@@ -2,9 +2,10 @@
   (:require [cheshire.core :as ch]
             [clojure.java.io :as io]
             [clojure.string :as string]
-            [geo.clojure.sink :as geo]
+            [geo-sink.constants :refer [cache-cursor-file]]
             [geo-sink.spec.action :as action]
-            [geo-sink.utils :refer [slurp-bytes]]))
+            [geo-sink.utils :refer [slurp-bytes write-file]]
+            [geo.clojure.sink :as geo]))
 
 (defn format+filter-actions
   ([actions]
@@ -40,6 +41,11 @@
      :space (.toLowerCase (get parts 2))
      :author (get parts 3)
      :filename filename}))
+
+
+(defn write-cursor-cache-file [block-number cursor]
+  (write-file cache-cursor-file (str "{\"block_number\": \"" block-number "\", \"cursor\": \"" cursor "\"}")))
+
 
 
 (def cached-roles-granted (->> (io/file "./cache/roles-granted/")
