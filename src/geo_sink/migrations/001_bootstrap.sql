@@ -359,8 +359,9 @@ $$ LANGUAGE plpgsql STRICT STABLE;
 
 -- 
 -- Query "schema" on an instance of a type entity (e.g. San Francisco) to get it's inferred type attributes
+-- "schemaCount" can be used for filtering
 --
-CREATE FUNCTION entities_schema(e_row entities)
+CREATE FUNCTION public.entities_schema(e_row entities)
 RETURNS SETOF public.entities AS $$
 BEGIN
     -- Using CTE to first fetch all types of the given entity
@@ -382,5 +383,17 @@ BEGIN
     SELECT e.*
     FROM entities e
     JOIN type_attributes ta ON e.id = ta.attribute_id;
+END;
+$$ LANGUAGE plpgsql STRICT STABLE;
+
+CREATE FUNCTION public.entities_schema_count(e_row entities)
+RETURNS integer AS $$
+DECLARE
+    attribute_count integer;
+BEGIN
+    SELECT count(*)
+    INTO attribute_count
+    FROM entities_schema(e_row);
+    RETURN attribute_count;
 END;
 $$ LANGUAGE plpgsql STRICT STABLE;
