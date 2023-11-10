@@ -3,12 +3,10 @@
             [geo-sink.access-control :refer [add-role remove-role]]
             [geo-sink.constants :refer [ATTRIBUTES ENTITIES]]
             [geo-sink.db-helpers :refer [try-execute]]
-            [geo-sink.functions :refer [populate-pg-functions]]
             [geo-sink.spec.action :as action-spec]
             [geo-sink.tables :refer [->action ->entity ->spaces ->triple]]
             [honey.sql :as sql]
             [honey.sql.helpers :as h]))
-
 (defn populate-entities
   "Takes in a seq of actions and populates the `entities` table"
   [actions]
@@ -194,8 +192,9 @@
   (populate-columns actions)
   (println "Populating proposals...")
   (populate-proposals actions)
-  (println "Populating functions")
-  (populate-pg-functions))
+  ;; (println "Populating functions")
+  ;; (populate-pg-functions)
+  )
 
 (defn role-granted->db [role]
   (add-role role))

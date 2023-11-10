@@ -5,7 +5,7 @@
             [clojure.string :as string]
             [dotenv :refer [env]]
             [geo-sink.cache :refer [format+filter-actions
-                                    write-cursor-cache-file]]
+                                    read-cursor-cache-file write-cursor-cache-file]]
             [geo-sink.constants :refer [cache-action-directory
                                         cache-entry-directory cache-granted-directory
                                         cache-revoked-directory]]
@@ -35,10 +35,13 @@
 (defn cursor-watcher
   "Watches the cursor for changes and updates the database as well as the cache file"
   [key ref old-cursor-string new-cursor-string]
-  (when not @stream-only
-        (write-cursor-cache-file new-cursor-string @current-block))
-  (update-db-cursor new-cursor-string @current-block))
-(add-watch cursor :watcher cursor-watcher)
+  (let [cursor-cache (read-cursor-cache-file)]
+    (when (and (not @stream-only)
+               (>= @current-block (:block_number cursor-cache)))
+      (write-cursor-cache-file new-cursor-string @current-block)
+    (update-db-cursor new-cursor-string @current-block)))
+
+  (add-watch cursor :watcher cursor-watcher))
 
 (defn take-all [ch f]
   (loop []

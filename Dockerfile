@@ -30,4 +30,4 @@ RUN chmod +x /usr/src/app/entrypoint.sh
 ENTRYPOINT ["/usr/src/app/entrypoint.sh"]
 
 # Default command
-CMD ["java", "-jar", "app-standalone.jar"]
+CMD ["java", "-jar", "app-standalone.jar", "--from-cache"]

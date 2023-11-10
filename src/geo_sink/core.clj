@@ -8,7 +8,7 @@
             [geo-sink.constants :refer [cache-action-directory
                                         cache-cursor-file cache-entry-directory
                                         cache-granted-directory cache-revoked-directory geo-genesis-start-block]]
-            [geo-sink.db-helpers :refer [reset-geo-db update-db-cursor]]
+            [geo-sink.db-helpers :refer [reset-geo-db]]
             [geo-sink.populate :refer [actions->db role-granted->db
                                        role-revoked->db]]
             [geo-sink.substreams :as substreams]))
@@ -57,8 +57,6 @@
       (let [cursor-cache (read-cursor-cache-file)]
         (println (str
                   "Syncing from cache:\n"
-                  "Cursor Cache: " (:cursor cursor-cache) "\n"
-                  "Block Number: " (:block-number cursor-cache) "\n"
                   "Actions: " (apply + (map count cached-actions)) "\n"
                   "Roles granted: " (apply + (map count cached-roles-granted)) "\n"
                   "Roles revoked: " (apply + (map count cached-roles-revoked)) "\n"))
@@ -80,7 +78,10 @@
             (role-revoked->db role)))
         (println "Done handling cached roles revoked.")
 
-        (update-db-cursor (:cursor cursor-cache) (:block-number cursor-cache))
+        (println (str "Setting database cursor to: " (:cursor cursor-cache)))
+        (println (str "Setting database cursor block number to: " (:block-number cursor-cache)))
+        (swap! substreams/cursor (fn [_] (:cursor cursor-cache))) 
+        (swap! substreams/current-block (fn [_] (str (:block-number cursor-cache))))
         (println "Done syncing cache with database.")))
 
 

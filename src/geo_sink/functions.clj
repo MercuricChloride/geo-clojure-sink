@@ -11,9 +11,9 @@
   [type-name type-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") type-ids))]
     (str "
-        DROP FUNCTION IF EXISTS public." type-name "_type();
+        DROP FUNCTION IF EXISTS public." type-name "();
         
-        CREATE FUNCTION public." type-name "_type()
+        CREATE FUNCTION public." type-name "()
         RETURNS SETOF public.entities AS $$
         BEGIN
           RETURN QUERY
@@ -98,7 +98,7 @@
       RETURNS SETOF attribute_with_unknown_value_type AS $$
       BEGIN
           RETURN QUERY
-          SELECT t.value_type AS type, t.string_value AS value, t.entity_id AS entity_value_id
+          SELECT t.value_type AS type, t.string_value AS value, t.value_id AS entity_value_id
           FROM public.triples t
           WHERE t.entity_id = e_row.id
           AND t.attribute_id IN (" quoted-ids ")
