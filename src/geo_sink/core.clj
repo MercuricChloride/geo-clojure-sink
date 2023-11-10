@@ -29,7 +29,7 @@
       (doseq [env-var env-vars]
         (when (not (env env-var))
           (throw (Exception. (str "Environment variable " env-var " is not defined"))))))
-    
+
       ;; Create required cache directories
     (doseq [path [cache-entry-directory cache-granted-directory cache-revoked-directory cache-action-directory]]
       (when-not (.exists (java.io.File. path))
@@ -45,26 +45,29 @@
       (swap! substreams/current-block (fn [_] (str geo-genesis-start-block)))
       (swap! substreams/cursor (fn [_] ""))
       (reset-geo-db)
-      (println "Done resetting database. Exiting...")
-      (System/exit 0))
+      (println "Done resetting database."))
 
 
     ;; From cache flag to populate the database from the cache
     (when from-cache
-      (println "Syncing cache with database...")
-      (doseq [actions cached-actions]
-        (actions->db actions))
-      (doseq [roles cached-roles-granted]
-        (doseq [role roles]
-          (role-granted->db role)))
-      (doseq [roles cached-roles-revoked]
-        (doseq [role roles]
-          (role-revoked->db role)))
-
       (let [cursor-cache (read-cursor-cache-file)]
-        (update-db-cursor (:cursor cursor-cache) (:block-number cursor-cache)))
-
-      (println "Done syncing cache with database. Exiting..."))
+        (println (str
+                  "Syncing from cache:\n"
+                  "Cursor Cache: " (:cursor cursor-cache) "\n"
+                  "Block Number: " (:block-number cursor-cache) "\n"
+                  "Actions: " (apply + (map count cached-actions)) "\n"
+                  "Roles granted: " (apply + (map count cached-roles-granted)) "\n"
+                  "Roles revoked: " (apply + (map count cached-roles-revoked)) "\n"))
+        (doseq [actions cached-actions]
+          (actions->db actions))
+        (doseq [roles cached-roles-granted]
+          (doseq [role roles]
+            (role-granted->db role)))
+        (doseq [roles cached-roles-revoked]
+          (doseq [role roles]
+            (role-revoked->db role)))
+        (update-db-cursor (:cursor cursor-cache) (:block-number cursor-cache))
+        (println "Done syncing cache with database.")))
 
 
     ;; Start streaming the substreams client and populating the cache when populate-cache is true)

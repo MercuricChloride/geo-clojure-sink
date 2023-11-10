@@ -11,7 +11,6 @@
   ([actions]
    (filter #(action/valid-action? %) actions))
   ([space author block-number proposal-name actions]
-   (println (str "Preparing " (count actions) " actions for space: " space ", author: " author ", block-number: " block-number))
    (->> (filter #(action/valid-action? %) actions)
         (map #(assoc % :space space :author author :block-number block-number :proposal-name proposal-name)))))
 
