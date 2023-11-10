@@ -4,7 +4,7 @@
             [clojure.string :as string]
             [geo-sink.constants :refer [cache-cursor-file]]
             [geo-sink.spec.action :as action]
-            [geo-sink.utils :refer [slurp-bytes write-bytes]]
+            [geo-sink.utils :refer [slurp-bytes]]
             [geo.clojure.sink :as geo]))
 
 (defn format+filter-actions
@@ -42,7 +42,6 @@
 
 
 (defn write-cursor-cache-file [cursor block-number]
-  (println (str "Writing cursor cache file with block number: " block-number " and cursor: " cursor))
   (spit cache-cursor-file (str "{\"block_number\": \"" block-number "\", \"cursor\": \"" cursor "\"}")))
 
 (defn read-cursor-cache-file []
