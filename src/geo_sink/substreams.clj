@@ -23,25 +23,21 @@
 
 (def current-block (atom (:cursors/block_number (get-cursor))))
 (def cursor (atom (:cursors/cursor (get-cursor))))
-(def is-populate-cache (atom true))
+(def stream-only (atom false))
 
 
 (defn file-exists? [filepath]
   (.exists (java.io.File. filepath)))
 
 
-
-(defn handle-cursor-change [new-cursor-string current-block]
-  (if @is-populate-cache
-    (write-cursor-cache-file new-cursor-string current-block)
-    (update-db-cursor new-cursor-string current-block)))
-
-
-
+;; When the cursor changes, we need to update the database cursor table.
+;; We also update the cache cursor file if we're not in stream-only mode.
 (defn cursor-watcher
   "Watches the cursor for changes and updates the database as well as the cache file"
   [key ref old-cursor-string new-cursor-string]
-  (handle-cursor-change new-cursor-string @current-block))
+  (when not @stream-only
+        (write-cursor-cache-file new-cursor-string @current-block))
+  (update-db-cursor new-cursor-string @current-block))
 (add-watch cursor :watcher cursor-watcher)
 
 (defn take-all [ch f]
@@ -145,7 +141,7 @@
                                             :metadata {"authorization" (env "SUBSTREAMS_API_TOKEN")}}))
 
 (defn handle-block-scoped-data
-  [populate-cache data]
+  [data]
 
   (try
     (let [message (:message data)
@@ -161,7 +157,7 @@
             (when (= (mod block-number 100) 0)
               (println "Empty block at: " block-number))
             (do
-              (when populate-cache
+              (when (not @stream-only)
                 (process-geo-data geo-output :populate-cache))
               (process-geo-data geo-output :populate-db)))
           (swap! current-block (fn [_] (str block-number)))
@@ -171,12 +167,12 @@
 
 
 (defn start-stream
-  ([client populate-cache]
+  ([client]
    (let [channel (async/chan (async/buffer 10))]
      (stream/Blocks client (rpc/new-Request {:start-block-num (Integer/parseInt @current-block)
                                              :start-cursor @cursor
                                              :modules (:modules spkg)
                                              :output-module "geo_out"}) channel)
-                                             
-     (take-all channel (partial handle-block-scoped-data populate-cache)))))
+
+     (take-all channel handle-block-scoped-data))))
  

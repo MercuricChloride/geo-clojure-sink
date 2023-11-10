@@ -22,8 +22,8 @@
       }
   }"
   []
-  (str "CREATE OR REPLACE FUNCTION entities_types(e_row entities)
-    RETURNS SETOF entities AS $$
+  (str "CREATE OR REPLACE FUNCTION public.entities_types(e_row entities)
+    RETURNS SETOF public.entities AS $$
     BEGIN
         RETURN QUERY
         SELECT e.*
@@ -48,7 +48,7 @@
       }
   }"
   []
-  (str "CREATE OR REPLACE FUNCTION entities_type_count(e_row entities)
+  (str "CREATE OR REPLACE FUNCTION public.entities_type_count(e_row entities)
     RETURNS integer AS $$
     DECLARE
         type_count integer;
@@ -78,8 +78,8 @@
       }
   }"
   []
-  (str "CREATE OR REPLACE FUNCTION entities_attributes(e_row entities)
-    RETURNS SETOF entities AS $$
+  (str "CREATE OR REPLACE FUNCTION public.entities_attributes(e_row entities)
+    RETURNS SETOF public.entities AS $$
     BEGIN
       RETURN QUERY
       SELECT e.*
@@ -106,7 +106,7 @@
       }
   }"
   []
-  (str "CREATE OR REPLACE FUNCTION entities_attribute_count(e_row entities)
+  (str "CREATE OR REPLACE FUNCTION public.entities_attribute_count(e_row entities)
     RETURNS integer AS $$
     DECLARE
         attribute_count integer;
@@ -134,7 +134,7 @@
   }"
   []
   (str "CREATE OR REPLACE FUNCTION entities_schema(e_row entities)
-    RETURNS SETOF entities AS $$
+    RETURNS SETOF public.entities AS $$
     BEGIN
         -- Using CTE to first fetch all types of the given entity
         RETURN QUERY 
@@ -160,9 +160,9 @@
   [type-name type-ids]
   (let [quoted-ids (clojure.string/join ", " (map #(str "'" % "'") type-ids))]
     (str "
-        DROP FUNCTION IF EXISTS " type-name "_type();
+        DROP FUNCTION IF EXISTS public." type-name "_type();
         
-        CREATE FUNCTION " type-name "_type()
+        CREATE FUNCTION public." type-name "_type()
         RETURNS SETOF public.entities AS $$
         BEGIN
           RETURN QUERY
@@ -198,31 +198,31 @@
   "The values for attributes but converted into their appropriate value type."
   []
   "
-  DROP TYPE IF EXISTS attribute_with_scalar_value_type CASCADE;
-CREATE TYPE attribute_with_scalar_value_type AS (
+  DROP TYPE IF EXISTS public.attribute_with_scalar_value_type CASCADE;
+CREATE TYPE public.attribute_with_scalar_value_type AS (
     type text,
     value text
 );
 
-   DROP TYPE IF EXISTS attribute_with_relation_value_type CASCADE;
-CREATE TYPE attribute_with_relation_value_type AS (
+   DROP TYPE IF EXISTS public.attribute_with_relation_value_type CASCADE;
+CREATE TYPE public.attribute_with_relation_value_type AS (
     type text, 
     entity_value_id text 
 );
    
-   comment on type attribute_with_relation_value_type is
-  E'@foreignKey (entity_value_id) references entities (id)';
+   comment on type public.attribute_with_relation_value_type is
+  E'@foreignKey (entity_value_id) references public.entities (id)';
 
    DROP TYPE IF EXISTS attribute_with_unknown_value_type CASCADE;
-   CREATE TYPE attribute_with_unknown_value_type AS (
+   CREATE TYPE public.attribute_with_unknown_value_type AS (
    type text,
-  value text,
+   value text,
    entity_value_id text 
    
 );
    
-    comment on type attribute_with_unknown_value_type is
-  E'@foreignKey (entity_value_id) references entities (id)';
+    comment on type public.attribute_with_unknown_value_type is
+  E'@foreignKey (entity_value_id) references public.entities (id)';
  ")
 
 

@@ -22,7 +22,7 @@
   (let [args (into #{} args)
         from-genesis (get args "--from-genesis")
         from-cache (get args "--from-cache")
-        populate-cache (get args "--populate-cache")]
+        stream-only (get args "--stream-only")]
 
     ;; Check for required environment variables
     (let [env-vars ["SUBSTREAMS_API_TOKEN" "SUBSTREAMS_ENDPOINT" "PGDATABASE" "PGUSER" "PGPASSWORD" "PGPORT" "PGHOST"]]
@@ -31,9 +31,9 @@
           (throw (Exception. (str "Environment variable " env-var " is not defined"))))))
 
     ;; Hande populate-cache logic
-    ;; Using substreams/is-populate-cache to help with passing populate-cache to watcher fn
-   (swap! substreams/is-populate-cache (fn [_] populate-cache)) 
-    (when (populate-cache)
+    ;; Using stream-only atom as a convenience flag to avoid having to pass it around in substreams.clj
+   (swap! substreams/stream-only (fn [_] stream-only)) 
+    (when (not stream-only)
     ;; Create required cache directories
       (doseq [path [cache-entry-directory cache-granted-directory cache-revoked-directory cache-action-directory]]
         (when-not (.exists (java.io.File. path))
@@ -88,4 +88,4 @@
     (while true
       (println "Streaming block #" (str @substreams/current-block))
       (let [client (substreams/spawn-client)]
-        (substreams/start-stream client populate-cache)))))
+        (substreams/start-stream client)))))
