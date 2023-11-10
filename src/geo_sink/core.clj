@@ -30,14 +30,18 @@
         (when (not (env env-var))
           (throw (Exception. (str "Environment variable " env-var " is not defined"))))))
 
+    ;; Hande populate-cache logic
+    ;; Using substreams/is-populate-cache to help with passing populate-cache to watcher fn
+   (swap! substreams/is-populate-cache (fn [_] populate-cache)) 
+    (when (populate-cache)
     ;; Create required cache directories
-    (doseq [path [cache-entry-directory cache-granted-directory cache-revoked-directory cache-action-directory]]
-      (when-not (.exists (java.io.File. path))
-        (.mkdirs (java.io.File. path))))
+      (doseq [path [cache-entry-directory cache-granted-directory cache-revoked-directory cache-action-directory]]
+        (when-not (.exists (java.io.File. path))
+          (.mkdirs (java.io.File. path))))
 
     ;; Create required cache file
-    (when-not (.exists (java.io.File. cache-cursor-file))
-      (write-cursor-cache-file geo-genesis-start-block ""))
+      (when-not (.exists (java.io.File. cache-cursor-file))
+        (write-cursor-cache-file geo-genesis-start-block "")))
 
     ;; From genesis or cache flag to clear and bootstrap the database with some fundamental entities
     (when (or from-genesis from-cache)
@@ -58,7 +62,7 @@
                   "Actions: " (apply + (map count cached-actions)) "\n"
                   "Roles granted: " (apply + (map count cached-roles-granted)) "\n"
                   "Roles revoked: " (apply + (map count cached-roles-revoked)) "\n"))
-        
+
         (println "Handling cached actions...")
         (doseq [actions cached-actions]
           (actions->db actions))
@@ -75,7 +79,7 @@
           (doseq [role roles]
             (role-revoked->db role)))
         (println "Done handling cached roles revoked.")
-        
+
         (update-db-cursor (:cursor cursor-cache) (:block-number cursor-cache))
         (println "Done syncing cache with database.")))
 

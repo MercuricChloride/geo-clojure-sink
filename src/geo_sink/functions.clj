@@ -314,7 +314,7 @@ CREATE TYPE attribute_with_relation_value_type AS (
         all-scalar? (every? #(= "scalar" %) value-types)]
 
 
-    (println name value-types)
+    ;; (println "Debuging function value types: " name value-types)
 
     (cond
       all-relations?

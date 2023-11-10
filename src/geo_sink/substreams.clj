@@ -20,8 +20,11 @@
             [sf.substreams.rpc.v2 :as rpc]
             [sf.substreams.rpc.v2.Stream.client :as stream]
             [sf.substreams.v1 :as v1]))
+
 (def current-block (atom (:cursors/block_number (get-cursor))))
 (def cursor (atom (:cursors/cursor (get-cursor))))
+(def is-populate-cache (atom true))
+
 
 (defn file-exists? [filepath]
   (.exists (java.io.File. filepath)))
@@ -29,8 +32,11 @@
 
 
 (defn handle-cursor-change [new-cursor-string current-block]
-  (update-db-cursor new-cursor-string current-block)
-  (write-cursor-cache-file new-cursor-string current-block))
+  (if @is-populate-cache
+    (write-cursor-cache-file new-cursor-string current-block)
+    (update-db-cursor new-cursor-string current-block)))
+
+
 
 (defn cursor-watcher
   "Watches the cursor for changes and updates the database as well as the cache file"
@@ -171,5 +177,6 @@
                                              :start-cursor @cursor
                                              :modules (:modules spkg)
                                              :output-module "geo_out"}) channel)
+                                             
      (take-all channel (partial handle-block-scoped-data populate-cache)))))
  
